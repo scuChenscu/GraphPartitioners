@@ -17,13 +17,14 @@
 #include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 int main() {
     int pnum=150;
     int memsize=4096;
-    string method="ldg";
     double lambda=1.1;
     double balance_ratio=1.05;
+    string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
     // 输入文件夹
     string input = "../graphs/input";
     // 输出文件夹，每次输出以 timestamp/graphs/partitions/algorithms/ 命名
@@ -47,27 +48,40 @@ int main() {
         convert_adjacency_list(original, edgename);
         return 0;
     }
-
-    converter = new Converter(edgename);
-//    LOG(INFO) << "Using shuffled dataset";
-//    converter = new Shuffler(edgename);
-    convert(edgename, converter, memsize);
-
-    Partitioner *partitioner = NULL;
-    if (method=="ne")
-        partitioner = new NePartitioner(edgename, method, pnum);
-    else if (method=="dbh")
-        partitioner = new DbhPartitioner(edgename, method, pnum, memsize, shuffle);
-    else if (method=="hdrf")
-        partitioner = new HdrfPartitioner(edgename,method,pnum,memsize,balance_ratio,lambda,shuffle);
-    else if (method=="ldg")
-        partitioner = new LdgPartitioner(edgename, method, pnum, memsize, shuffle);
-    else if (method=="fennel")
-        partitioner = new FennelPartitioner(edgename, method, pnum, memsize, shuffle);
-    else
-        LOG(ERROR) << "unkown method: " << method;
-    partitioner->split();
-
-    google::ShutdownGoogleLogging();
+    // 遍历input下的.graph文件
+    for (const auto& entry : fs::directory_iterator(input)) {
+        // 判断entry是否为文件
+        if (fs::is_regular_file(entry)) {
+            string filename = entry.path().filename().string();
+            if (!filename.ends_with(".graph")) continue;
+            LOG(INFO) <<"execute algorithms on :" << filename << endl;
+            converter = new Converter(edgename);
+        //    LOG(INFO) << "Using shuffled dataset";
+        //    converter = new Shuffler(edgename);
+            convert(edgename, converter, memsize);
+            int size = sizeof(algorithms) / sizeof(algorithms[0]);
+            for (int i = 0; i < size; i++) {
+                string method = algorithms[i];
+                LOG(INFO) << "execute " << method << " on :" << filename << endl;
+                Partitioner *partitioner = nullptr;
+                if (method=="ne")
+                    partitioner = new NePartitioner(edgename, method, pnum);
+                else if (method=="dbh")
+                    partitioner = new DbhPartitioner(edgename, method, pnum, memsize, shuffle);
+                else if (method=="hdrf")
+                    partitioner = new HdrfPartitioner(edgename,method,pnum,memsize,balance_ratio,lambda,shuffle);
+                else if (method=="ldg")
+                    partitioner = new LdgPartitioner(edgename, method, pnum, memsize, shuffle);
+                else if (method=="fennel")
+                    partitioner = new FennelPartitioner(edgename, method, pnum, memsize, shuffle);
+                else {
+                    LOG(ERROR) << "unkown method: " << method;
+                    continue;
+                }
+                partitioner->split();
+            }
+            google::ShutdownGoogleLogging();
+        }
+    }
     return 0;
 }
