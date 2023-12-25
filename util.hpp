@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <glog/logging.h>
+#include <sstream>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); ++i)
 #define repv(i, n) for (vid_t i = 0; i < n; ++i)

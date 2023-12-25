@@ -31,9 +31,9 @@ private:
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
 
-    vector<unordered_set<vid_t>> node2neis;
+    vector<unordered_set<vid_t> > node2neis;
     unordered_set<vid_t> true_vids;
-    vector<unordered_set<vid_t>> subg_vids;
+    vector<unordered_set<vid_t> > subg_vids;
     vector<int> balance_vertex_distribute;
 
 protected:

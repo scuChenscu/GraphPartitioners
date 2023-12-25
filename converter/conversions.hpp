@@ -81,7 +81,8 @@ public:
     }
 
     virtual void finalize() {
-        num_vertices=max_vid+1;
+        // TODO
+        num_vertices=max_vid + 1;
         fout.seekp(0);
         LOG(INFO) << "num_vertices: " << num_vertices
                   << ", num_edges: " << num_edges;
@@ -96,3 +97,5 @@ public:
 };
 
 void convert(std::string basefilename, Converter *converter, int memorysize);
+
+void convert_adjacency_list(std::string graph_filename, std::string output);

@@ -6,6 +6,8 @@
 
 #include "conversions.hpp"
 
+using namespace std;
+
 // Removes \n from the end of line
 void FIXLINE(char *s)
 {
@@ -78,4 +80,55 @@ void convert(std::string basefilename, Converter *converter, int memorysize=4096
     converter->finalize();
 }
 
+
+void convert_adjacency_list(string graph_filename, string output) {
+    LOG(INFO) << "converting adjacency list to [from to]" << graph_filename;
+    ifstream  inFile(graph_filename);
+    if(!inFile) {
+        LOG(FATAL) << "empty file name";
+    }
+    vector<pair<int, int>> edges;
+    int v_size, e_size;
+    string line;
+    getline(inFile, line); // 跳过第一行
+    istringstream _iss(line);
+    _iss >> v_size >> e_size;
+    LOG(INFO) << v_size << " " << e_size << endl;
+    int num = 0;
+    while (getline(inFile, line)) { // 读取一行
+        int from;
+        istringstream iss(line); // 获取当前行
+        iss >> from; // 获取第一个数字
+        LOG(INFO) << from << endl;
+        int to;
+        while (iss >> to) { // 获取剩下的数字
+            num++;
+            // 打印rest
+            LOG(INFO) << from << " " << to << endl;
+            std::pair<int, int> pair(from, to); // 将第一个数字与剩下的数字组成pair
+            edges.push_back(pair); // 将pair添加到pairs容器中
+        }
+    }
+    LOG(INFO) << "num: " << num << endl;
+    sort(edges.begin(), edges.end());
+
+    auto last = std::unique(edges.begin(), edges.end());
+    edges.erase(last, edges.end());
+    inFile.close();
+
+
+    ofstream outFile(output);
+    if (!outFile) {
+        LOG(FATAL) << "Error: Cannot open file for writing!" << endl;
+        return;
+    }
+
+    for (const auto& edge : edges) {
+        outFile << edge.first << " " << edge.second << endl;
+    }
+
+    outFile.close();
+
+    LOG(INFO) << "Conversion completed successfully." << endl;
+}
 

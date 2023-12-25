@@ -31,7 +31,7 @@ private:
     uint64_t max_partition_load;
 
     //balance vertex partition distribute
-    vector<vector<vid_t>> part_degrees; //each partition node degree
+    vector<vector<vid_t> > part_degrees; //each partition node degree
     vector<int> balance_vertex_distribute; //each node belongs to which unique partition
 
     vector<uint64_t> edge_load;

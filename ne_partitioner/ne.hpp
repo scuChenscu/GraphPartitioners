@@ -35,7 +35,7 @@ private:
     double average_degree;
     size_t capacity;
 
-    vector<vector<vid_t>> part_degrees;
+    vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
 
     std::vector<edge_t> edges;

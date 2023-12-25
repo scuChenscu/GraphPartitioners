@@ -1,6 +1,14 @@
+set(CMAKE_CXX_STANDARD 20)
+
 cmake_minimum_required(VERSION 3.17)
 project(GraphPartitioning)
 
+set(GLOG /opt/homebrew/Cellar/glog/0.6.0)
+set(GFLAGS /opt/homebrew/Cellar/gflags/2.2.2)
+set(BOOST /opt/homebrew/Cellar/boost/1.83.0)
+
+include_directories(${GLOG}/include/ ${GFLAGS}/include/ ${BOOST}/include/)
+link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
@@ -11,4 +19,5 @@ add_library(SOURCE_FILES
         streaming_vp/ldg.cpp
         streaming_vp/fennel.cpp)
 add_executable(GraphPartitioning main.cpp)
-target_link_libraries (GraphPartitioning glog SOURCE_FILES)
+target_link_libraries (GraphPartitioning GLOG GFLAGS SOURCE_FILES)
+

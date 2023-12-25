@@ -12,7 +12,7 @@ template<typename ValueType, typename KeyType, typename IdxType = vid_t>
 class MinHeap {
 private:
     IdxType n;
-    std::vector<std::pair<ValueType, KeyType>> heap;
+    std::vector<std::pair<ValueType, KeyType> > heap;
     std::vector<IdxType> key2idx;
 
 public:

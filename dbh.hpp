@@ -39,7 +39,7 @@ private:
     dense_bitset true_vids;;
     std::vector<dense_bitset> is_mirrors;
     std::vector<size_t> counter;
-    vector<vector<vid_t>> part_degrees;
+    vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
 
 protected:

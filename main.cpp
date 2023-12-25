@@ -14,16 +14,24 @@
 #include "hdrf.hpp"
 #include "streaming_vp/ldg.hpp"
 #include "streaming_vp/fennel.hpp"
+#include <filesystem>
 
 using namespace std;
 
 int main() {
     int pnum=150;
     int memsize=4096;
-    string method="fennel";
+    string method="ldg";
     double lambda=1.1;
     double balance_ratio=1.05;
-    string edgename="/data0/mzs/Code/MPGraph/data/products/walks.txt";
+    // 输入文件夹
+    string input = "../graphs/input";
+    // 输出文件夹，每次输出以 timestamp/graphs/partitions/algorithms/ 命名
+    string output = "../graphs/output";
+    string graphname = "copter2.graph";
+    string edgename = "../graphs/output/" + graphname;
+    string original ="../graphs/" + graphname;
+    bool handle = false;
 
     bool shuffle=false;
 
@@ -34,6 +42,12 @@ int main() {
     Converter* converter;
     string binedgelist; // binary edgelist file
     LOG(INFO) << "Using normal dataset";
+
+    if (handle) {
+        convert_adjacency_list(original, edgename);
+        return 0;
+    }
+
     converter = new Converter(edgename);
 //    LOG(INFO) << "Using shuffled dataset";
 //    converter = new Shuffler(edgename);

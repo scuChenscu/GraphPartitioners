@@ -5,6 +5,7 @@
 #include "fennel.hpp"
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 FennelPartitioner::FennelPartitioner(string basefilename, string method, int pnum, int memsize, bool shuffle) {
     p=pnum;
@@ -89,7 +90,9 @@ void FennelPartitioner::do_fennel() {
     for(int i = 0; i < num_vertices; ++i) {
         ordering[i] = i;
     }
-    random_shuffle(ordering.begin(), ordering.end());
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(ordering.begin(), ordering.end(), g);
 
     // Initial paritions
     for(int i = 0; i < p; ++i) {

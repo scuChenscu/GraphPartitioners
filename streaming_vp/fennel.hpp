@@ -36,9 +36,9 @@ private:
 //    dense_bitset true_vids;
 //    vector<dense_bitset> subg_vids;
 //    vector<int> balance_vertex_distribute;
-    vector<unordered_set<vid_t>> node2neis;
+    vector<unordered_set<vid_t> > node2neis;
     unordered_set<vid_t> true_vids;
-    vector<unordered_set<vid_t>> subg_vids;
+    vector<unordered_set<vid_t> > subg_vids;
     vector<int> balance_vertex_distribute;
 
 protected:
