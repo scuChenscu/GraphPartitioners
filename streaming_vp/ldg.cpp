@@ -5,9 +5,12 @@
 #include "ldg.hpp"
 #include <algorithm>
 #include <cmath>
-#include <algorithm>
 #include <random>
-
+// Linear Deterministic Greedy(LDG)
+// LDG是一种贪心算法，它以顶点作为输入流，是一种点分区算法。
+// 它希望能把顶点分配到邻居最多的分区，以减小跨分区边的数量。
+// LDG需要保存之前的顶点信息，因此不适用于无边界流。
+// LDG和Fennel算法的区别在于partition_score的计算方式不太一样
 LdgPartitioner::LdgPartitioner(string basefilename, string method, int pnum, int memsize, bool shuffle) {
     p=pnum;
     set_write_files(basefilename,method,pnum);

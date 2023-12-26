@@ -3,7 +3,7 @@
 //method "partition method"
 //dataset "name of the dataset to construct graph."
 //filename "name of the file to store edge list of a graph."
-//shuffle "for streaming graph, influncing the partitioning quality"
+//shuffle "for streaming graph, influencing the partitioning quality"
 
 #include <iostream>
 #include "converter/conversions.hpp"
@@ -32,8 +32,8 @@ int main() {
     string graphname = "copter2.graph";
     string edgename = "../graphs/output/" + graphname;
     string original ="../graphs/" + graphname;
+    // 处理数据集
     bool handle = false;
-
     bool shuffle=false;
 
     google::InitGoogleLogging("main");  //参数为自己的可执行文件名
@@ -75,7 +75,7 @@ int main() {
                 else if (method=="fennel")
                     partitioner = new FennelPartitioner(edgename, method, pnum, memsize, shuffle);
                 else {
-                    LOG(ERROR) << "unkown method: " << method;
+                    LOG(ERROR) << "unknown method: " << method;
                     continue;
                 }
                 partitioner->split();

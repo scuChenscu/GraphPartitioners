@@ -11,7 +11,6 @@ NePartitioner::NePartitioner(std::string basefilename, std::string method, int p
     set_write_files(basefilename,method,pnum);
 
     total_time.start();
-
     std::ifstream fin(binedgelist_name(basefilename),
                       std::ios::binary | std::ios::ate);
     // tellp 用于返回写入位置，

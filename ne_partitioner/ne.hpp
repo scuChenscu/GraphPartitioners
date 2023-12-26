@@ -108,7 +108,7 @@ private:
             min_heap.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
         }
 
-        //仅支持无向图，在计算neibor的时候有向和无向会导致邻居的差别从而影响分割
+        //仅支持无向图，在计算neighbor的时候有向和无向会导致邻居的差别从而影响分割
         rep (direction, 2) {
             adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
             for (size_t i = 0; i < neighbors.size();) {
