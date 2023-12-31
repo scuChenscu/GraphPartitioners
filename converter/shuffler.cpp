@@ -9,23 +9,21 @@
 
 #include <stdlib.h>
 
-#include "../util.hpp"
+#include "../utils/util.hpp"
 #include "shuffler.hpp"
 
-void Shuffler::init(int memorysize)
-{
+void Shuffler::init(int memorysize) {
     num_vertices = 0;
     num_edges = 0;
     nchunks = 0;
-    degrees.reserve(1<<30);
-    chunk_bufsize = (size_t)memorysize * 1024 * 1024 / sizeof(edge_t);
-    LOG(INFO)<<sizeof(edge_t)<<" "<<"memorysize: "<<memorysize<<"chunk_bufsize: "<<chunk_bufsize;
+    degrees.reserve(1 << 30);
+    chunk_bufsize = (size_t) memorysize * 1024 * 1024 / sizeof(edge_t);
+    LOG(INFO) << sizeof(edge_t) << " " << "memorysize: " << memorysize << "chunk_bufsize: " << chunk_bufsize;
     chunk_buf.reserve(chunk_bufsize);
 }
 
-void Shuffler::finalize()
-{
-    num_vertices=max_vid+1;
+void Shuffler::finalize() {
+    num_vertices = max_vid + 1;
     cwrite(edge_t(0, 0), true);
     LOG(INFO) << "num_vertices: " << num_vertices
               << ", num_edges: " << num_edges;
@@ -37,51 +35,49 @@ void Shuffler::finalize()
         CHECK(fin[i]) << "open chunk " << i << " failed";
     }
     std::vector<bool> finished(nchunks, false);
-    std::ofstream fout(shuffled_binedgelist_name(basefilename), std::ios::binary);
+    std::ofstream fout(shuffled_binary_edgelist_name(filename), std::ios::binary);
     int count = 0;
-    fout.write((char *)&num_vertices, sizeof(num_vertices));
-    fout.write((char *)&num_edges, sizeof(num_edges));
+    fout.write((char *) &num_vertices, sizeof(num_vertices));
+    fout.write((char *) &num_edges, sizeof(num_edges));
     while (true) {
         int i = rand() % nchunks;
         if (!fin[i].eof()) {
             edge_t e;
-            fin[i].read((char *)&e, sizeof(edge_t));
+            fin[i].read((char *) &e, sizeof(edge_t));
             if (fin[i].eof()) {
                 finished[i] = true;
                 count++;
                 if (count == nchunks)
                     break;
             } else
-                fout.write((char *)&e, sizeof(edge_t));
+                fout.write((char *) &e, sizeof(edge_t));
         }
     }
-    rep (i, nchunks)
-        fin[i].close();
+    rep (i, nchunks)fin[i].close();
     fout.close();
     chunk_clean();
     fout.close();
 
-    fout.open(degree_name(basefilename), std::ios::binary);
-    fout.write((char *)&degrees[0], num_vertices * sizeof(vid_t));
+    fout.open(degree_name(filename), std::ios::binary);
+    fout.write((char *) &degrees[0], num_vertices * sizeof(vid_t));
     fout.close();
 
     LOG(INFO) << "finished shuffle";
 }
 
-void Shuffler::add_edge(vid_t from, vid_t to)
-{
+void Shuffler::add_edge(vid_t from, vid_t to) {
     if (to == from) {
         LOG(WARNING) << "Tried to add self-edge " << from << "->" << to
                      << std::endl;
         return;
     }
-    if(from>to){
-        if(from>max_vid){
-            max_vid=from;
+    if (from > to) {
+        if (from > max_vid) {
+            max_vid = from;
         }
-    } else{
-        if(to>max_vid){
-            max_vid=to;
+    } else {
+        if (to > max_vid) {
+            max_vid = to;
         }
     }
 
@@ -95,24 +91,20 @@ void Shuffler::add_edge(vid_t from, vid_t to)
     cwrite(e);
 }
 
-std::string Shuffler::chunk_filename(int chunk)
-{
-    std::string new_basefilename=change2tmpdir(basefilename);
+std::string Shuffler::chunk_filename(int chunk) {
+    std::string new_input = change2tmpdir(filename);
     std::stringstream ss;
-    ss << new_basefilename << "." << chunk << ".chunk";
-    LOG(INFO)<<ss.str();
+    ss << new_input << "." << chunk << ".chunk";
+    LOG(INFO) << ss.str();
     return ss.str();
 }
 
-void Shuffler::chunk_clean()
-{
-    rep (i, nchunks)
-        remove(chunk_filename(i).c_str());
+void Shuffler::chunk_clean() {
+    rep (i, nchunks)remove(chunk_filename(i).c_str());
 }
 
-void Shuffler::cwrite(edge_t e, bool flush)
-{
-    if (!flush){
+void Shuffler::cwrite(edge_t e, bool flush) {
+    if (!flush) {
         chunk_buf.push_back(e);
     }
     if (flush || chunk_buf.size() >= chunk_bufsize) {

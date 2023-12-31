@@ -12,12 +12,12 @@ link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
-        ne_partitioner/graph.cpp
-        ne_partitioner/ne.cpp
-        dbh.cpp
-        hdrf.cpp
-        streaming_vp/ldg.cpp
-        streaming_vp/fennel.cpp)
+        algorithms/ne/graph.cpp
+        algorithms/ne/ne.cpp
+        algorithms/dbh/dbh.cpp
+        algorithms/hdrf/hdrf.cpp
+        algorithms/ldg/ldg.cpp
+        algorithms/fennel/fennel.cpp)
 add_executable(GraphPartitioning main.cpp)
-target_link_libraries (GraphPartitioning GLOG GFLAGS SOURCE_FILES)
+target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
 

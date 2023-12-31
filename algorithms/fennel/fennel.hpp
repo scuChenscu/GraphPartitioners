@@ -13,14 +13,14 @@
 #include <unordered_set>
 #include <set>
 #include <vector>
-#include "../partitioner.hpp"
-#include "../dense_bitset.hpp"
-#include "../util.hpp"
-#include "../partitioner.hpp"
+#include "../../partitioner/partitioner.hpp"
+#include "../../utils/dense_bitset.hpp"
+#include "../../utils/util.hpp"
+#include "../../partitioner/partitioner.hpp"
 
-using namespace  std;
+using namespace std;
 
-class FennelPartitioner: public Partitioner{
+class FennelPartitioner : public Partitioner {
 private:
     vid_t num_vertices;
     size_t num_edges;
@@ -44,12 +44,18 @@ private:
 
 protected:
     void read_and_do(string opt_name);
+
     void do_fennel();
+
     void batch_node_assignment(vector<edge_t> &edges);
+
     void addNeighbors(edge_t &edge);
-    int intersection(unordered_set<vid_t>& nums1, unordered_set<vid_t>& nums2);
+
+    int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
+
 public:
-    FennelPartitioner(string basefilename, string method, int pnum, int memsize, bool shuffle);
+    FennelPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle);
+
     void split();
 };
 

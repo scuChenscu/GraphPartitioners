@@ -6,22 +6,25 @@
 
 #include <vector>
 
-#include "../util.hpp"
+#include "../../utils/util.hpp"
 
+// 模板函数，有点类似Java中的泛型
 template<typename ValueType, typename KeyType, typename IdxType = vid_t>
 class MinHeap {
 private:
     IdxType n;
     std::vector<std::pair<ValueType, KeyType> > heap;
+    // TODO key2idx的作用？
     std::vector<IdxType> key2idx;
-
+// 构造方法，初始化成员变量n为0，heap为空，key2idx为空。
 public:
-    MinHeap() : n(0), heap(), key2idx() { }
+    MinHeap() : n(0), heap(), key2idx() {}
 
+    // 这是一个调整堆的过程
     IdxType shift_up(IdxType cur) {
         if (cur == 0) return 0;
-        IdxType p = (cur-1) / 2;
-
+        IdxType p = (cur - 1) / 2;
+        // value是顶点的度，key是顶点vid
         if (heap[cur].first < heap[p].first) {
             std::swap(heap[cur], heap[p]);
             std::swap(key2idx[heap[cur].second], key2idx[heap[p].second]);
@@ -31,8 +34,8 @@ public:
     }
 
     void shift_down(IdxType cur) {
-        IdxType l = cur*2 + 1;
-        IdxType r = cur*2 + 2;
+        IdxType l = cur * 2 + 1;
+        IdxType r = cur * 2 + 2;
 
         if (l >= n)
             return;
@@ -53,7 +56,7 @@ public:
     void insert(ValueType value, KeyType key) {
         heap[n] = std::make_pair(value, key);
         key2idx[key] = n++;
-        IdxType cur = shift_up(n-1);
+        IdxType cur = shift_up(n - 1);
         shift_down(cur);
     }
 
@@ -86,12 +89,14 @@ public:
         return true;
     }
 
-    bool get_min(ValueType& value, KeyType& key) {
+    bool get_min(ValueType &value, KeyType &key) {
+        // 如果堆里面有元素，选择堆顶元素，因为堆顶元素引入的新顶点最少
         if (n > 0) {
-            value = heap[0].first;
+            value = heap[0].first; // 0就是堆顶元素，看插入的逻辑
             key = heap[0].second;
             return true;
         } else
+            // 堆为空时，返回false，随机选择顶点
             return false;
     }
 

@@ -59,7 +59,7 @@ namespace tqdm {
         bool gui = false;
     };
 
-    template <typename _Iterator>
+    template<typename _Iterator>
     class Tqdm : public MyIteratorWrapper<_Iterator> {
     private:
         using TQDM_IT = MyIteratorWrapper<_Iterator>;
@@ -68,12 +68,14 @@ namespace tqdm {
 
     public:
         /**
-         containter-like methods
+         containter-like algorithms
          */
         // actually current value
         // virtual _Iterator begin() { return this->get(); }
         Tqdm &begin() { return *this; }
+
         const Tqdm &begin() const { return *this; }
+
         // virtual _Iterator end() { return e; }
         Tqdm end() const { return Tqdm(e, e); }
 
@@ -99,7 +101,7 @@ namespace tqdm {
         //   // std::memcpy(this, &other, sizeof(Tqdm));
         // }
 
-        template <typename _Container,
+        template<typename _Container,
                 typename = typename std::enable_if<
                         !std::is_same<_Container, Tqdm>::value>::type>
         Tqdm(_Container &v) : TQDM_IT(std::begin(v)), e(std::end(v)), self() {
@@ -108,7 +110,7 @@ namespace tqdm {
 
         explicit operator bool() const { return this->get() != e; }
 
-        /** TODO: magic methods */
+        /** TODO: magic algorithms */
         virtual void _incr() const override {
             if (this->get() == e)
                 throw std::out_of_range(
@@ -117,47 +119,52 @@ namespace tqdm {
             TQDM_IT::_incr();
             if (this->get() == e) {
                 printf("\nfinished: %" PRIu64 "/%" PRIu64 "\n",
-                        static_cast<std::uint64_t>(self.total),
-                        static_cast<std::uint64_t>(self.total));
+                       static_cast<std::uint64_t>(self.total),
+                       static_cast<std::uint64_t>(self.total));
             } else
-                printf("\r%" PRIi64 " left", (int64_t)(e - this->get()));
+                printf("\r%" PRIi64 " left", (int64_t) (e - this->get()));
         }
-        virtual void _incr() override { ((Tqdm const &)*this)._incr(); }
+
+        virtual void _incr() override { ((Tqdm const &) *this)._incr(); }
     };
 
-    template <typename _Iterator, typename _Tqdm = Tqdm<_Iterator>>
+    template<typename _Iterator, typename _Tqdm = Tqdm<_Iterator>>
     _Tqdm tqdm(_Iterator begin, _Iterator end) {
         return _Tqdm(begin, end);
     }
 
-    template <typename _Iterator, typename _Tqdm = Tqdm<_Iterator>>
+    template<typename _Iterator, typename _Tqdm = Tqdm<_Iterator>>
     _Tqdm tqdm(_Iterator begin, size_t total) {
         return _Tqdm(begin, total);
     }
 
-    template <typename _Container,
+    template<typename _Container,
             typename _Tqdm = Tqdm<typename _Container::iterator>>
     _Tqdm tqdm(_Container &v) {
         return _Tqdm(v);
     }
 
-    template <size_t N, typename T, typename _Tqdm = Tqdm<T *>>
+    template<size_t N, typename T, typename _Tqdm = Tqdm<T *>>
     _Tqdm tqdm(T (&tab)[N]) {
         return _Tqdm(tab, N);
     }
 
-    template <typename SizeType = int>
+    template<typename SizeType = int>
     using RangeTqdm = Tqdm<RangeIterator<SizeType>>;
-    template <typename SizeType> RangeTqdm<SizeType> range(SizeType n) {
+
+    template<typename SizeType>
+    RangeTqdm<SizeType> range(SizeType n) {
         return RangeTqdm<SizeType>(RangeIterator<SizeType>(n),
                                    RangeIterator<SizeType>(n));
     }
-    template <typename SizeType>
+
+    template<typename SizeType>
     RangeTqdm<SizeType> range(SizeType start, SizeType end) {
         return RangeTqdm<SizeType>(RangeIterator<SizeType>(start, end),
                                    RangeIterator<SizeType>(start, end));
     }
-    template <typename SizeType>
+
+    template<typename SizeType>
     RangeTqdm<SizeType> range(SizeType start, SizeType end, SizeType step) {
         return RangeTqdm<SizeType>(RangeIterator<SizeType>(start, end, step),
                                    RangeIterator<SizeType>(start, end, step));
@@ -172,24 +179,24 @@ class TqdmDeprecationWarning(Exception):
 ASCII_FMT = " 123456789#"
 UTF_FMT = u" " + u''.join(map(_unich, range(0x258F, 0x2587, -1)))
 class tqdm(object):
-    @staticmethod
+    @staticalgorithm
     def format_sizeof(num, suffix=''):
-    @staticmethod
+    @staticalgorithm
     def format_interval(t):
-    @staticmethod
+    @staticalgorithm
     def status_printer(file):
-    @staticmethod
+    @staticalgorithm
     def format_meter(n, total, elapsed, ncols=None, prefix='',
                      ascii=False, unit='it', unit_scale=False, rate=None,
                      bar_format=None):
     def __new__(cls, *args, **kwargs):
-    @classmethod
+    @classalgorithm
     def _get_free_pos(cls, instance=None):
-    @classmethod
+    @classalgorithm
     def _decr_instances(cls, instance):
-    @classmethod
+    @classalgorithm
     def write(cls, s, file=sys.stdout, end="\n"):
-    @classmethod
+    @classalgorithm
     def pandas(tclass, *targs, **tkwargs):
     def __init__(self, iterable=None, desc=None, total=None, leave=True,
                  file=sys.stderr, ncols=None, mininterval=0.1,
@@ -218,7 +225,7 @@ class tqdm(object):
         file  : `io.TextIOWrapper` or `io.StringIO`, optional
             Specifies where to output the progress messages
             [default: sys.stderr]. Uses `file.write(str)` and `file.flush()`
-            methods.
+            algorithms.
         ncols  : int, optional
             The width of the entire output message. If specified,
             dynamically resizes the progressbar to stay within this bound.

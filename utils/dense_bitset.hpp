@@ -7,28 +7,26 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <stdint.h>
+#include <cstdint>
 #include "util.hpp"
 
-class dense_bitset
-{
+// 稠密位图
+class dense_bitset {
 public:
     /// Constructs a bitset of 0 length
-    dense_bitset() : array(NULL), len(0), arrlen(0) {}
+    dense_bitset() : array(nullptr), len(0), arrlen(0) {}
 
     /// Constructs a bitset with 'size' bits. All bits will be cleared.
     //explicit关键字只对有一个参数的类构造函数有效
-    explicit dense_bitset(size_t size) : array(NULL), len(0), arrlen(0)
-    {
+    explicit dense_bitset(size_t size) : array(nullptr), len(0), arrlen(0) {
         resize(size);
         clear();
     }
 
     /// Make a copy of the bitset db
-    dense_bitset(const dense_bitset &db)
-    {
+    dense_bitset(const dense_bitset &db) {
         //len规定容量，arrlen实际使用大小
-        array = NULL;
+        array = nullptr;
         len = 0;
         arrlen = 0;
         *this = db;
@@ -39,8 +37,7 @@ public:
 
     /// Make a copy of the bitset db
     //为了解决一些频繁调用的小函数大量消耗栈空间（栈内存）的问题，特别的引入了 inline 修饰符，表示为内联函数
-    inline dense_bitset &operator=(const dense_bitset &db)
-    {
+    inline dense_bitset &operator=(const dense_bitset &db) {
         resize(db.size());
         len = db.len;
         arrlen = db.arrlen;
@@ -55,14 +52,13 @@ public:
     \Warning When shirnking, the current implementation may still leave the
     "deleted" bits in place which will mess up the popcount.
     */
-    inline void resize(size_t n)
-    {
+    inline void resize(size_t n) {
         len = n;
         // need len bits
         size_t prev_arrlen = arrlen;
         //sizeof返回的字节数
         arrlen = (n / (sizeof(size_t) * 8)) + (n % (sizeof(size_t) * 8) > 0);
-        array = (size_t *)realloc(array, sizeof(size_t) * arrlen);
+        array = (size_t *) realloc(array, sizeof(size_t) * arrlen);
         // this zeros the remainder of the block after the last bit
         fix_trailing_bits();
         // if we grew, we need to zero all new blocks
@@ -74,14 +70,12 @@ public:
     }
 
     /// Sets all bits to 0
-    inline void clear()
-    {
+    inline void clear() {
         for (size_t i = 0; i < arrlen; ++i)
             array[i] = 0;
     }
 
-    inline bool empty() const
-    {
+    inline bool empty() const {
         for (size_t i = 0; i < arrlen; ++i)
             if (array[i])
                 return false;
@@ -89,30 +83,26 @@ public:
     }
 
     /// Sets all bits to 1
-    inline void fill()
-    {
+    inline void fill() {
         for (size_t i = 0; i < arrlen; ++i)
-            array[i] = (size_t)-1;
+            array[i] = (size_t) -1;
         fix_trailing_bits();
     }
 
     /// Prefetches the word containing the bit b
-    inline void prefetch(size_t b) const
-    {
+    inline void prefetch(size_t b) const {
         __builtin_prefetch(&(array[b / (8 * sizeof(size_t))]));
     }
 
     /// Returns the value of the bit b
-    inline bool get(size_t b) const
-    {
+    inline bool get(size_t b) const {
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
         return array[arrpos] & (size_t(1) << size_t(bitpos));
     }
 
     //! Atomically sets the bit at position b to true returning the old value
-    inline bool set_bit(size_t b)
-    {
+    inline bool set_bit(size_t b) {
         // use CAS to set the bit
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
@@ -121,8 +111,7 @@ public:
     }
 
     //! Atomically xors a bit with 1
-    inline bool xor_bit(size_t b)
-    {
+    inline bool xor_bit(size_t b) {
         // use CAS to set the bit
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
@@ -131,16 +120,14 @@ public:
     }
 
     //! Returns the value of the word containing the bit b
-    inline size_t containing_word(size_t b)
-    {
+    inline size_t containing_word(size_t b) {
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
         return array[arrpos];
     }
 
     //! Returns the value of the word containing the bit b
-    inline size_t get_containing_word_and_zero(size_t b)
-    {
+    inline size_t get_containing_word_and_zero(size_t b) {
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
         return __sync_lock_test_and_set(&array[arrpos], size_t(0));
@@ -172,8 +159,7 @@ public:
      * ( up to b + 2 * wordsize_in_bits )
      */
     inline void transfer_approximate_unsafe(dense_bitset &other, size_t &start,
-                                            size_t &b)
-    {
+                                            size_t &b) {
         // must be identical in length
         CHECK_EQ(other.len, len);
         CHECK_EQ(other.arrlen, arrlen);
@@ -204,8 +190,7 @@ public:
         Unlike set_bit(), this uses a non-atomic set which is faster,
         but is unsafe if accessed by multiple threads.
     */
-    inline bool set_bit_unsync(size_t b)
-    {
+    inline bool set_bit_unsync(size_t b) {
         // use CAS to set the bit
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
@@ -217,8 +202,7 @@ public:
 
     //! Atomically sets the state of the bit to the new value returning the old
     //value
-    inline bool set(size_t b, bool value)
-    {
+    inline bool set(size_t b, bool value) {
         if (value)
             return set_bit(b);
         else
@@ -229,8 +213,7 @@ public:
       This version uses a non-atomic set which is faster, but
       is unsafe if accessed by multiple threads.
     */
-    inline bool set_unsync(size_t b, bool value)
-    {
+    inline bool set_unsync(size_t b, bool value) {
         if (value)
             return set_bit_unsync(b);
         else
@@ -238,8 +221,7 @@ public:
     }
 
     //! Atomically set the bit at b to false returning the old value
-    inline bool clear_bit(size_t b)
-    {
+    inline bool clear_bit(size_t b) {
         // use CAS to set the bit
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
@@ -252,8 +234,7 @@ public:
       This version uses a non-atomic set which is faster, but
       is unsafe if accessed by multiple threads.
     */
-    inline bool clear_bit_unsync(size_t b)
-    {
+    inline bool clear_bit_unsync(size_t b) {
         // use CAS to set the bit
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
@@ -272,33 +253,34 @@ public:
         typedef const size_t *pointer;
         size_t pos;
         const dense_bitset *db;
+
         bit_pos_iterator() : pos(-1), db(NULL) {}
+
         bit_pos_iterator(const dense_bitset *const db, size_t pos)
-                : pos(pos), db(db)
-        {
+                : pos(pos), db(db) {
         }
 
         size_t operator*() const { return pos; }
-        size_t operator++()
-        {
+
+        size_t operator++() {
             if (db->next_bit(pos) == false)
-                pos = (size_t)(-1);
+                pos = (size_t) (-1);
             return pos;
         }
-        size_t operator++(int)
-        {
+
+        size_t operator++(int) {
             size_t prevpos = pos;
             if (db->next_bit(pos) == false)
-                pos = (size_t)(-1);
+                pos = (size_t) (-1);
             return prevpos;
         }
-        bool operator==(const bit_pos_iterator &other) const
-        {
+
+        bool operator==(const bit_pos_iterator &other) const {
             CHECK_EQ(db, other.db);
             return other.pos == pos;
         }
-        bool operator!=(const bit_pos_iterator &other) const
-        {
+
+        bool operator!=(const bit_pos_iterator &other) const {
             CHECK_EQ(db, other.db);
             return other.pos != pos;
         }
@@ -307,28 +289,25 @@ public:
     typedef bit_pos_iterator iterator;
     typedef bit_pos_iterator const_iterator;
 
-    bit_pos_iterator begin() const
-    {
+    bit_pos_iterator begin() const {
         size_t pos;
         if (first_bit(pos) == false)
             pos = size_t(-1);
         return bit_pos_iterator(this, pos);
     }
 
-    bit_pos_iterator end() const
-    {
-        return bit_pos_iterator(this, (size_t)(-1));
+    bit_pos_iterator end() const {
+        return bit_pos_iterator(this, (size_t) (-1));
     }
 
     /** Returns true with b containing the position of the
         first bit set to true.
         If such a bit does not exist, this function returns false.
     */
-    inline bool first_bit(size_t &b) const
-    {
+    inline bool first_bit(size_t &b) const {
         for (size_t i = 0; i < arrlen; ++i) {
             if (array[i]) {
-                b = (size_t)(i * (sizeof(size_t) * 8)) +
+                b = (size_t) (i * (sizeof(size_t) * 8)) +
                     first_bit_in_block(array[i]);
                 return true;
             }
@@ -340,11 +319,10 @@ public:
         first bit set to false.
         If such a bit does not exist, this function returns false.
     */
-    inline bool first_zero_bit(size_t &b) const
-    {
+    inline bool first_zero_bit(size_t &b) const {
         for (size_t i = 0; i < arrlen; ++i) {
             if (~array[i]) {
-                b = (size_t)(i * (sizeof(size_t) * 8)) +
+                b = (size_t) (i * (sizeof(size_t) * 8)) +
                     first_bit_in_block(~array[i]);
                 return true;
             }
@@ -356,20 +334,19 @@ public:
         the position of the next bit set to true, and return true.
         If all bits after b are false, this function returns false.
     */
-    inline bool next_bit(size_t &b) const
-    {
+    inline bool next_bit(size_t &b) const {
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
         // try to find the next bit in this block
         bitpos = next_bit_in_block(bitpos, array[arrpos]);
         if (bitpos != 0) {
-            b = (size_t)(arrpos * (sizeof(size_t) * 8)) + bitpos;
+            b = (size_t) (arrpos * (sizeof(size_t) * 8)) + bitpos;
             return true;
         } else {
             // we have to loop through the rest of the array
             for (size_t i = arrpos + 1; i < arrlen; ++i) {
                 if (array[i]) {
-                    b = (size_t)(i * (sizeof(size_t) * 8)) +
+                    b = (size_t) (i * (sizeof(size_t) * 8)) +
                         first_bit_in_block(array[i]);
                     return true;
                 }
@@ -381,8 +358,7 @@ public:
     ///  Returns the number of bits in this bitset
     inline size_t size() const { return len; }
 
-    size_t popcount() const
-    {
+    size_t popcount() const {
         size_t ret = 0;
         for (size_t i = 0; i < arrlen; ++i) {
             ret += __builtin_popcountl(array[i]);
@@ -390,8 +366,7 @@ public:
         return ret;
     }
 
-    dense_bitset operator&(const dense_bitset &other) const
-    {
+    dense_bitset operator&(const dense_bitset &other) const {
         CHECK_EQ(size(), other.size());
         dense_bitset ret(size());
         for (size_t i = 0; i < arrlen; ++i) {
@@ -400,8 +375,7 @@ public:
         return ret;
     }
 
-    dense_bitset operator|(const dense_bitset &other) const
-    {
+    dense_bitset operator|(const dense_bitset &other) const {
         CHECK_EQ(size(), other.size());
         dense_bitset ret(size());
         for (size_t i = 0; i < arrlen; ++i) {
@@ -410,8 +384,7 @@ public:
         return ret;
     }
 
-    dense_bitset operator-(const dense_bitset &other) const
-    {
+    dense_bitset operator-(const dense_bitset &other) const {
         CHECK_EQ(size(), other.size());
         dense_bitset ret(size());
         for (size_t i = 0; i < arrlen; ++i) {
@@ -420,8 +393,7 @@ public:
         return ret;
     }
 
-    dense_bitset &operator&=(const dense_bitset &other)
-    {
+    dense_bitset &operator&=(const dense_bitset &other) {
         CHECK_EQ(size(), other.size());
         for (size_t i = 0; i < arrlen; ++i) {
             array[i] &= other.array[i];
@@ -429,8 +401,7 @@ public:
         return *this;
     }
 
-    dense_bitset &operator|=(const dense_bitset &other)
-    {
+    dense_bitset &operator|=(const dense_bitset &other) {
         CHECK_EQ(size(), other.size());
         for (size_t i = 0; i < arrlen; ++i) {
             array[i] |= other.array[i];
@@ -438,8 +409,7 @@ public:
         return *this;
     }
 
-    dense_bitset &operator-=(const dense_bitset &other)
-    {
+    dense_bitset &operator-=(const dense_bitset &other) {
         CHECK_EQ(size(), other.size());
         for (size_t i = 0; i < arrlen; ++i) {
             array[i] = array[i] - (array[i] & other.array[i]);
@@ -447,8 +417,7 @@ public:
         return *this;
     }
 
-    void invert()
-    {
+    void invert() {
         for (size_t i = 0; i < arrlen; ++i) {
             array[i] = ~array[i];
         }
@@ -456,36 +425,32 @@ public:
     }
 
 private:
-    inline static void bit_to_pos(size_t b, size_t &arrpos, size_t &bitpos)
-    {
+    inline static void bit_to_pos(size_t b, size_t &arrpos, size_t &bitpos) {
         // the compiler better optimize this...
         arrpos = b / (8 * sizeof(size_t));
         bitpos = b & (8 * sizeof(size_t) - 1);
     }
 
     // returns 0 on failure
-    inline size_t next_bit_in_block(const size_t &b, const size_t &block) const
-    {
+    inline size_t next_bit_in_block(const size_t &b, const size_t &block) const {
         size_t belowselectedbit =
                 size_t(-1) - (((size_t(1) << b) - 1) | (size_t(1) << b));
         size_t x = block & belowselectedbit;
         if (x == 0)
             return 0;
         else
-            return (size_t)__builtin_ctzl(x);
+            return (size_t) __builtin_ctzl(x);
     }
 
     // returns 0 on failure
-    inline size_t first_bit_in_block(const size_t &block) const
-    {
+    inline size_t first_bit_in_block(const size_t &block) const {
         if (block == 0)
             return 0;
         else
-            return (size_t)__builtin_ctzl(block);
+            return (size_t) __builtin_ctzl(block);
     }
 
-    void fix_trailing_bits()
-    {
+    void fix_trailing_bits() {
         // how many bits are in the last block
         size_t lastbits = len % (8 * sizeof(size_t));
         if (lastbits == 0)
@@ -497,6 +462,7 @@ private:
     size_t len;
     size_t arrlen;
 
-    template <int len> friend class fixed_dense_bitset;
+    template<int len> friend
+    class fixed_dense_bitset;
 };
 

@@ -14,15 +14,14 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "dense_bitset.hpp"
-#include "util.hpp"
-#include "partitioner.hpp"
+#include "../../utils/dense_bitset.hpp"
+#include "../../utils/util.hpp"
+#include "../../partitioner/partitioner.hpp"
 
 
-using namespace  std;
+using namespace std;
 
-class DbhPartitioner : public Partitioner
-{
+class DbhPartitioner : public Partitioner {
 private:
     vid_t num_vertices;
     size_t num_edges;
@@ -44,9 +43,13 @@ private:
 
 protected:
     void read_and_do(string opt_name);
+
     void batch_dbh(vector<edge_t> &edges);
-    void batch_node_assignment(vector<edge_t> &edges); 
+
+    void batch_node_assignment(vector<edge_t> &edges);
+
 public:
-    DbhPartitioner(string basefilename, string method, int pnum, int memsize, bool shuffle);
+    DbhPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle);
+
     void split();
 };
