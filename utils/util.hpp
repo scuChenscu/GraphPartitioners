@@ -55,14 +55,6 @@ inline void appendToFile(const std::string& content) {
     }
 }
 
-inline string getFormattedTime() {
-    std::time_t result = std::time(0);
-    std::tm* current_time = std::localtime(&result);
-    char buffer[11];
-    std::strftime(buffer, sizeof(buffer), "%Y%m%d%H%M%S", current_time);
-    return buffer;
-}
-
 inline std::string getCurrentTime() {
     std::time_t result = std::time(nullptr);
     std::tm* localTime = std::localtime(&result);

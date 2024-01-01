@@ -20,7 +20,8 @@ protected:
     ofstream edge_ofstream;
     ofstream vertex_ofstream;
     // 边割率
-    double edge_cut;
+    int edge_cut;
+    double edge_cut_rate;
     // 负载均衡
     double load_balance;
     // 复制因子
@@ -44,4 +45,10 @@ public:
     void save_edge(vid_t from, vid_t to, int partition_id) {
         edge_ofstream << from << " " << to << " " << partition_id << endl;
     }
+
+    virtual void calculate_load_balance() {}
+
+    virtual void calculate_edge_cut() {}
+
+    virtual void calculate_replication_factor() {}
 };

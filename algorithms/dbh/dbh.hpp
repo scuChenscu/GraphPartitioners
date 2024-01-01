@@ -49,7 +49,8 @@ protected:
     void batch_node_assignment(vector<edge_t> &edges);
 
 public:
-    DbhPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle);
+    DbhPartitioner(const string& input, const string& algorithm, int num_partition, int memsize, bool shuffle);
 
     void split();
+    virtual void calculate_replication_factor();
 };

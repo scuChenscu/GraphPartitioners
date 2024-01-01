@@ -148,16 +148,29 @@ void FennelPartitioner::do_fennel() {
 }
 
 // TODO 这个划分方法有点奇怪
+// Fennel算法是把点划分到不同分分区
 void FennelPartitioner::batch_node_assignment(vector<edge_t> &edges) {
     for (auto &e: edges) {
         vid_t sp = balance_vertex_distribute[e.first], tp = balance_vertex_distribute[e.second];
         save_edge(e.first, e.second, sp);
         save_edge(e.second, e.first, tp);
+        LOG(INFO) << sp << tp << endl;
+        if (sp != tp) {
+            edge_cut++;
+        }
     }
+    edge_cut_rate= (double) edge_cut / edges.size();
 }
 
 void FennelPartitioner::split() {
     LOG(INFO) << "begin process neighbors";
+
+    stringstream ss;
+    ss << "Fennel" << endl;
+    LOG(INFO) << ss.str();
+    appendToFile(ss.str());
+
+
     read_and_do("process neighbors");
     LOG(INFO) << "begin write nodes";
     do_fennel();
@@ -167,4 +180,14 @@ void FennelPartitioner::split() {
     edge_ofstream.close();
     LOG(INFO) << "total vertex count: " << true_vids.size();
     LOG(INFO) << "total partition time: " << total_time.get_time();
+
+    stringstream result;
+    result << "Cost Time: " << total_time.get_time()
+           << "| Edge Cut: " << edge_cut
+           << endl;
+    appendToFile(result.str());
+}
+
+void FennelPartitioner::calculate_edge_cut() {
+
 }

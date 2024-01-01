@@ -1,14 +1,11 @@
-//
-// Created by muzongshen on 2021/9/23.
-//
-
 #include <utility>
 
 #include "../../partitioner/partitioner.hpp"
 #include "dbh.hpp"
 #include "../../utils/util.hpp"
-
-DbhPartitioner::DbhPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle) {
+// Degree Based Hashing (DBH)[6]分割通过判断结点的度信息来切分结点分配边。对于幂律图来说低度结点的局部性很容易保持，高度结点因为关联太多结点如果将边全部分配在一个子图上不太可能，因此该算法尽最大可能保持低度结点的局部性。
+// DBH也是把边划分到不同的分区，计算负载因子
+DbhPartitioner::DbhPartitioner(const string& input, const string& algorithm, int num_partition, int memsize, bool shuffle) {
     p = num_partition;
     config_output_files(input, algorithm, num_partition);
 
@@ -84,7 +81,11 @@ void DbhPartitioner::batch_node_assignment(vector<edge_t> &edges) {
 
 void DbhPartitioner::split() {
     read_and_do("dbh");
-
+    string current_time = getCurrentTime();
+    stringstream ss;
+    ss << "DBH" << endl;
+    LOG(INFO) << ss.str();
+    appendToFile(ss.str());
     //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
     size_t total_mirrors = 0;
     vector<vid_t> buckets(p);
@@ -124,5 +125,22 @@ void DbhPartitioner::split() {
 
     // rep(i, p) LOG(INFO) << "edges in partition " << i << ": " << counter[i];
     // LOG(INFO) << "replication factor: " << (double)total_mirrors / true_vids.popcount();
+    calculate_replication_factor();
     LOG(INFO) << "total partition time: " << total_time.get_time();
+    stringstream result;
+    result << "Cost Time: " << total_time.get_time()
+           << " | Replication Factor: " << replication_factor
+           << endl;
+    appendToFile(result.str());
+}
+
+void DbhPartitioner::calculate_replication_factor() {
+    // 每个边集的顶点数求和除以总的顶点数
+    int replicas = 0;
+    for (auto & is_mirror : is_mirrors) repv(j, p) {
+            if (is_mirror.get(j)) {
+                replicas++;
+            }
+        }
+    replication_factor = (double) replicas / num_vertices;
 }

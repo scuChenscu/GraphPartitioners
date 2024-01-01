@@ -6,7 +6,8 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
-
+// LDG是把点分到不同的分区，需要计算边割率
+// LDG计算：遍历所有的边，判断边的两个顶点是否在同一个分区
 // Linear Deterministic Greedy(LDG)
 // LDG是一种贪心算法，它以顶点作为输入流，是一种点分区算法。
 // 它希望能把顶点分配到邻居最多的分区，以减小跨分区边的数量。
@@ -131,15 +132,39 @@ void LdgPartitioner::batch_node_assignment(vector<edge_t> &edges) {
         vid_t sp = balance_vertex_distribute[e.first], tp = balance_vertex_distribute[e.second];
         save_edge(e.first, e.second, sp);
         save_edge(e.second, e.first, tp);
+        if (sp != tp) {
+            edge_cut++;
+        }
     }
+
+    edge_cut_rate = double(edge_cut) / edges.size();
 }
 
 void LdgPartitioner::split() {
     read_and_do("process neighbors");
+
+    stringstream ss;
+    ss << "LDG" << endl;
+    LOG(INFO) << ss.str();
+    appendToFile(ss.str());
+
     do_ldg();
     read_and_do("node_assignment");
     total_time.stop();
     edge_ofstream.close();
     LOG(INFO) << "total vertex count: " << true_vids.size();
     LOG(INFO) << "total partition time: " << total_time.get_time();
+
+    // calculate_replication_factor();
+    stringstream result;
+    result << "Cost Time: " << total_time.get_time()
+            << " | Edge Cut: " << edge_cut
+            << " | Edge Cut Rate: " << edge_cut_rate
+            << " | Edges: " << num_edges
+            << " | Vertex: " << num_vertices
+           << endl;
+    appendToFile(result.str());
+}
+
+void LdgPartitioner::calculate_edge_cut() {
 }

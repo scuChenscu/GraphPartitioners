@@ -22,7 +22,7 @@ private:
     // batch processing globals
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
-    int num_partition;
+    int p;
     double lambda;
 
     vector<vid_t> degrees;
@@ -33,7 +33,7 @@ private:
     vector<int> balance_vertex_distribute; //each node belongs to which unique partition
 
     vector<uint64_t> edge_load;
-    vector<dense_bitset> vertex_partition_matrix;
+    vector<dense_bitset> is_mirrors;
     dense_bitset true_vids;
     uint64_t min_load = UINT64_MAX;
     uint64_t max_load = 0;
@@ -43,7 +43,7 @@ protected:
 
     int find_max_score_partition_hdrf(edge_t &e);
 
-    void update_vertex_partition_matrix(edge_t &e, int max_p);
+    void update_is_mirrors(edge_t &e, int max_p);
 
     void update_min_max_load(int max_p);
 
@@ -52,9 +52,11 @@ protected:
     void read_and_do(const string& opt_name);
 
 public:
-    HdrfPartitioner(const string& file_name, const string& algorithm, int num_partition, int memsize, double balance_ratio,
+    HdrfPartitioner(const string& file_name, const string& algorithm, int p, int memsize, double balance_ratio,
                     double balance_lambda, bool shuffle);
 
-    void split();
+    void split() override;
+
+    virtual void calculate_replication_factor();
 };
 

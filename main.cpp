@@ -23,7 +23,8 @@ int main() {
     int memory_size = 4096;
     double lambda = 1.1;
     double balance_ratio = 1.05;
-    string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
+    // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
+    string algorithms[] = {"ldg"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -64,6 +65,9 @@ int main() {
             converter = new Converter(filename);
             convert(filename, converter, memory_size);
             LOG(INFO) << "Execute algorithms on: " << filename << endl;
+            stringstream info;
+            info << "Graph Name: " << filename << endl;
+            appendToFile(info.str());
             int size = sizeof(algorithms) / sizeof(algorithms[0]);
             for (int i = 0; i < size; i++) {
                 string algorithm = algorithms[i];

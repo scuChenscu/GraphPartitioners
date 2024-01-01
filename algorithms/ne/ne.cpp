@@ -117,6 +117,15 @@ void NePartitioner::split() {
     min_heap.reserve(num_vertices);
 
     LOG(INFO) << "Start NE partitioning...";
+    // 把参数写入文件，NE是边分割算法，计算复制因子
+    string current_time = getCurrentTime();
+    stringstream ss;
+    ss << "NE" << endl
+       << "BALANCE RATIO:" << BALANCE_RATIO
+       << endl;
+    LOG(INFO) << ss.str();
+    appendToFile(ss.str());
+
     // 前p-1个分区
     for (bucket = 0; bucket < p - 1; bucket++) {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
@@ -205,6 +214,25 @@ void NePartitioner::split() {
     edge_ofstream.close();
 
     total_time.stop();
-    LOG(INFO) << "total partition time: " << total_time.get_time();
+    calculate_replication_factor();
+    LOG(INFO) << "total partition time: " << total_time.get_time() << endl;
+    stringstream result;
+    result << "Cost Time: " << total_time.get_time()
+        << " | Replication Factor: " << replication_factor
+        << endl;
+    appendToFile(result.str());
+
+
+}
+
+void NePartitioner::calculate_replication_factor() {
+    // 每个边集的顶点数求和除以总的顶点数
+    int replicas = 0;
+    for (auto & is_mirror : is_mirrors) repv(j, p) {
+            if (is_mirror.get(j)) {
+                replicas++;
+            }
+        }
+    replication_factor = (double) replicas / num_vertices;
 }
 

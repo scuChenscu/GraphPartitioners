@@ -57,7 +57,9 @@ public:
     FennelPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle);
 
     void split();
+
+    void calculate_edge_cut();
 };
 
 
-#endif //GRAPHPARTITIONING_FENNEL_HPP
+#endif

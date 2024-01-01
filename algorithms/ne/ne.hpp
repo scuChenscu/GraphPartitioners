@@ -37,7 +37,7 @@ private:
     // 图结构
     graph_t adj_out, adj_in;
     MinHeap<vid_t, vid_t> min_heap;
-    //每个分区当前的数量
+    //每个分区边的数量
     std::vector<size_t> occupied;
     std::vector<vid_t> degrees;
     std::vector<int8_t> master;
@@ -77,14 +77,14 @@ private:
         return p;
     }
 
-    void assign_edge(int bucket, vid_t from, vid_t to) {
+    void assign_edge(int partition, vid_t from, vid_t to) {
         // save_edge(from, to, bucket);
         true_vids.set_bit_unsync(from);
         true_vids.set_bit_unsync(to);
-        is_mirrors[from].set_bit_unsync(bucket);
-        is_mirrors[to].set_bit_unsync(bucket);
+        is_mirrors[from].set_bit_unsync(partition);
+        is_mirrors[to].set_bit_unsync(partition);
         assigned_edges++;
-        occupied[bucket]++;
+        occupied[partition]++;
         degrees[from]--;
         degrees[to]--;
     }
@@ -195,6 +195,8 @@ private:
 public:
     NePartitioner(std::string input, std::string algorithm, int num_partition);
 
-    void split();
+    void split() override;
+
+    virtual void calculate_replication_factor();
 };
 
