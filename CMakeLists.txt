@@ -14,6 +14,9 @@ add_library(SOURCE_FILES
         converter/shuffler.cpp
         algorithms/ne/graph.cpp
         algorithms/ne/ne.cpp
+        algorithms/ours/ours.cpp
+        algorithms/model1/model1.cpp
+        algorithms/model2/model2.cpp
         algorithms/dbh/dbh.cpp
         algorithms/hdrf/hdrf.cpp
         algorithms/ldg/ldg.cpp

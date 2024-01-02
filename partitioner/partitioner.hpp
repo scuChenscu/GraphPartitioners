@@ -26,6 +26,14 @@ protected:
     double load_balance;
     // 复制因子
     double replication_factor;
+
+    size_t max_edge;
+
+    size_t min_edge;
+
+    size_t avg_edge;
+
+    double alpha; // 负载平衡因子 = 分区最大边数 * 分区数 / 总边数，应该是越小越好，越小说明越均衡
 public:
     // 分区算法
     virtual void split() = 0;

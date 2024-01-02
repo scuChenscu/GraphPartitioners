@@ -12,14 +12,22 @@
 
 #include "../../utils/dense_bitset.hpp"
 #include "../../partitioner/partitioner.hpp"
-#include "graph.hpp"
-#include "min_heap.hpp"
+#include "../ne/graph.hpp"
+#include "../ne/min_heap.hpp"
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
 
 /* Neighbor Expansion (NE) */
-class NePartitioner : public Partitioner {
+class Model1Partitioner : public Partitioner {
 private:
+    // TODO 因为NE算法在设定负载均衡的时候，是直接给个参数，会导致最后一个分区可能出现顶点数较少的情况，导致负载均衡做的不够好
+    // 如果我们能够在图遍历的过程中，动态地计算到这个负载均衡的值，可能实现边割率和负载均衡的同时优化
+    // 比如根据当前已分配顶点跟外界的边数，当前分区负载距离标准负载的距离，来动态地调整负载均衡
+    // 当前边数，剩余边数
+
+    // 连通分量最接近的里面选，但是这样不一定是最优的
+
+    // 能否通过融合的方式？ 就是很多小分区，融合成符合要求的大分区，NP难的问题
     const double BALANCE_RATIO = 1.00;
 
     std::string input;
@@ -39,11 +47,17 @@ private:
     MinHeap<vid_t, vid_t> min_heap;
     //每个分区边的数量
     std::vector<size_t> occupied;
+    // 顶点的度
     std::vector<vid_t> degrees;
+    MinHeap<vid_t, vid_t> d;
     std::vector<int8_t> master;
     std::vector<dense_bitset> is_cores, is_boundarys;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
+
+    vector<int> connected_components;
+
+    int components;
 
     //随机数生成器
     //std::random_device rd;
@@ -87,6 +101,8 @@ private:
         occupied[partition]++;
         degrees[from]--;
         degrees[to]--;
+//        d.decrease_key(from);
+//        d.decrease_key(to);
     }
 
     void add_boundary(vid_t vid) {
@@ -186,6 +202,17 @@ private:
         return true;
     }
 
+    bool get_target_vertex(vid_t &vid) {
+        // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
+        // TODO 以上这个计算不太现实
+        // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
+        if (d.size() == 0) return false;
+        vid_t degree;
+        d.get_min(degree, vid);
+        d.remove(vid);
+        return true;
+    }
+
     void assign_remaining();
 
     void assign_master();
@@ -193,7 +220,7 @@ private:
     size_t count_mirrors();
 
 public:
-    NePartitioner(std::string input, std::string algorithm, int num_partition);
+    Model1Partitioner(std::string input, std::string algorithm, int num_partition);
 
     void split() override;
 

@@ -37,6 +37,8 @@ void graph_t::build(const std::vector<edge_t> &edges) {
         vdata[edges[i].first].push_back(i);
     }
     // build方法先分配空间，在对每个顶点v，记录它的邻边id，邻边数目len，初始化完成vdata
+
+    // TODO 可以在这里计算连通分量，vdata存储了每个顶点的邻边数据
 }
 
 void graph_t::build_reverse(const std::vector<edge_t> &edges) {

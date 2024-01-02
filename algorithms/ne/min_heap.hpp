@@ -60,6 +60,10 @@ public:
         shift_down(cur);
     }
 
+    int size() {
+        return n;
+    }
+
     bool contains(KeyType key) {
         return key2idx[key] < n && heap[key2idx[key]].second == key;
     }

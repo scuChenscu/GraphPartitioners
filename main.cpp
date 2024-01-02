@@ -12,19 +12,23 @@
 #include "algorithms/dbh/dbh.hpp"
 #include "algorithms/hdrf/hdrf.hpp"
 #include "algorithms/ldg/ldg.hpp"
+#include "algorithms/ours/ours.hpp"
 #include "algorithms/fennel/fennel.hpp"
+#include "algorithms/model1/model1.hpp""
+#include "algorithms/model2/model2.hpp""
 #include <filesystem>
 
 using namespace std;
 namespace fs = std::filesystem;
 
 int main() {
-    int num_partition = 150;
+    // int num_partition = 5;
+    int partitions[] = {2, 4, 8, 16, 32, 64};
     int memory_size = 4096;
     double lambda = 1.1;
     double balance_ratio = 1.05;
     // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-    string algorithms[] = {"ldg"};
+    string algorithms[] = {"ne", "model2"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -35,7 +39,7 @@ int main() {
 //    string filename = "../graphs/input/" + graphname;
 //    string original ="../graphs/" + graphname;
     // TODO 随机打乱
-    bool shuffle=false;
+    bool shuffle = false;
 
     google::InitGoogleLogging("main");  //参数为自己的可执行文件名
     FLAGS_logtostderr = true;
@@ -47,13 +51,13 @@ int main() {
     // 遍历input下的.graph文件
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "Time:" << current_time
-    << " Partitions:" << num_partition
-    << " lambda:" << lambda
-    << " Balance ratio:" << balance_ratio
-    <<" Memory size:" << memory_size
-    << " Shuffle:" << shuffle
-    << endl;
+    ss << "=======================================================================" << endl
+       << "Time:" << current_time
+       << " lambda:" << lambda
+       << " Balance ratio:" << balance_ratio
+       << " Memory size:" << memory_size
+       << " Shuffle:" << shuffle
+       << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
     for (const auto &entry: fs::directory_iterator(input)) {
@@ -65,30 +69,45 @@ int main() {
             converter = new Converter(filename);
             convert(filename, converter, memory_size);
             LOG(INFO) << "Execute algorithms on: " << filename << endl;
-            stringstream info;
-            info << "Graph Name: " << filename << endl;
-            appendToFile(info.str());
+            stringstream graph;
+            graph << "Graph Name: " << filename << endl;
+            appendToFile(graph.str());
             int size = sizeof(algorithms) / sizeof(algorithms[0]);
-            for (int i = 0; i < size; i++) {
-                string algorithm = algorithms[i];
-                LOG(INFO) << "execute " << algorithm << " on: " << filename << endl;
-                Partitioner *partitioner;
-                if (algorithm == "ne")
-                    partitioner = new NePartitioner(filename, algorithm, num_partition);
-                else if (algorithm == "dbh")
-                    partitioner = new DbhPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
-                else if (algorithm == "hdrf")
-                    partitioner = new HdrfPartitioner(filename, algorithm, num_partition, memory_size, balance_ratio,
-                                                      lambda, shuffle);
-                else if (algorithm == "ldg")
-                    partitioner = new LdgPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
-                else if (algorithm == "fennel")
-                    partitioner = new FennelPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
-                else {
-                    LOG(ERROR) << "Unknown algorithm: " << algorithm;
-                    continue;
+            int partition = sizeof(partitions) / sizeof(partitions[0]);
+            for (int j = 0; j < partition; j++) {
+                int num_partition = partitions[j];
+                stringstream part;
+                part << "Partition: " << num_partition << endl;
+                appendToFile(part.str());
+                for (int i = 0; i < size; i++) {
+                    string algorithm = algorithms[i];
+                    LOG(INFO) << "execute " << algorithm << " on: " << filename << endl;
+                    Partitioner *partitioner;
+                    if (algorithm == "ne")
+                        partitioner = new NePartitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "ours")
+                        partitioner = new OursPartitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "model1")
+                        partitioner = new Model1Partitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "model2")
+                        partitioner = new Model2Partitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "dbh")
+                        partitioner = new DbhPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
+                    else if (algorithm == "hdrf")
+                        partitioner = new HdrfPartitioner(filename, algorithm, num_partition, memory_size,
+                                                          balance_ratio,
+                                                          lambda, shuffle);
+                    else if (algorithm == "ldg")
+                        partitioner = new LdgPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
+                    else if (algorithm == "fennel")
+                        partitioner = new FennelPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
+                    else {
+                        LOG(ERROR) << "Unknown algorithm: " << algorithm;
+                        continue;
+                    }
+                    partitioner->split();
                 }
-                partitioner->split();
+
             }
         }
     }

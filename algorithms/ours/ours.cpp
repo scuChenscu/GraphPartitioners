@@ -1,8 +1,8 @@
-#include "ne.hpp"
+#include "ours.hpp"
 
 //固定随机数
 // 构造函数
-NePartitioner::NePartitioner(std::string input, std::string algorithm, int num_partition)
+OursPartitioner::OursPartitioner(std::string input, std::string algorithm, int num_partition)
         : input(input), gen(985) {
     p = num_partition;
     config_output_files(input, algorithm, num_partition);
@@ -56,7 +56,7 @@ NePartitioner::NePartitioner(std::string input, std::string algorithm, int num_p
 }
 
 //最后一个子图就是剩下边组合而成
-void NePartitioner::assign_remaining() {
+void OursPartitioner::assign_remaining() {
     auto &is_boundary = is_boundarys[p - 1], &is_core = is_cores[p - 1];
     repv(u, num_vertices) for (auto &i: adj_out[u])
             if (edges[i.v].valid()) {
@@ -76,7 +76,7 @@ void NePartitioner::assign_remaining() {
     }
 }
 
-void NePartitioner::assign_master() {
+void OursPartitioner::assign_master() {
     std::vector<vid_t> count_master(p, 0);
     std::vector<vid_t> quota(p, num_vertices);
     long long sum = p * num_vertices;
@@ -106,21 +106,27 @@ void NePartitioner::assign_master() {
     }
 }
 
-size_t NePartitioner::count_mirrors() {
+size_t OursPartitioner::count_mirrors() {
     size_t result = 0;
     rep(i, p) result += is_boundarys[i].popcount();
     return result;
 }
 
-void NePartitioner::split() {
+void OursPartitioner::split() {
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
+    // 存储度，从小到大
+    d.reserve(num_vertices);
+    repv(vid, num_vertices) {
+        d.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
+    }
 
-    LOG(INFO) << "Start NE partitioning...";
+
+    LOG(INFO) << "Start ours partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "NE" << endl
+    ss << "Ours" << endl
        << "BALANCE RATIO:" << BALANCE_RATIO
        << endl;
     LOG(INFO) << ss.str();
@@ -130,18 +136,19 @@ void NePartitioner::split() {
     for (bucket = 0; bucket < p - 1; bucket++) {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
         while (occupied[bucket] < capacity) {
-            vid_t d, vid;
-            if (!min_heap.get_min(d, vid)) { // 当S\C为空时，从V\C中随机选择顶点
-                if (!get_free_vertex(vid)) { // 当V\C已经没有顶点，结束算法
+            vid_t degree, vid;
+            if (!min_heap.get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
+                if (!get_target_vertex(vid)) { // 当V\C已经没有顶点，结束算法
                     break;
                 }
                 // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
-                d = adj_out[vid].size() + adj_in[vid].size();
+                degree = adj_out[vid].size() + adj_in[vid].size();
             } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
                 min_heap.remove(vid);
+                d.remove(vid);
             }
             // 把顶点加入到C，即核心集
-            occupy_vertex(vid, d);
+            occupy_vertex(vid, degree);
         }
         //TODO 清空最小堆
         min_heap.clear();
@@ -214,24 +221,24 @@ void NePartitioner::split() {
     edge_ofstream.close();
 
     total_time.stop();
-
+    calculate_replication_factor();
     LOG(INFO) << "total partition time: " << total_time.get_time() << endl;
     stringstream result;
-
-    calculate_replication_factor();
-    calculate_alpha();
     result << "Cost Time: " << total_time.get_time()
         << " | Replication Factor: " << replication_factor
-        << " | Max Edge: " << max_edge
-        << " | Min Edge: " << min_edge
-        << " | Avg Edge: " << num_edges / p
-        << " | Edges: " << num_edges
-        << " | Vertices: " << num_vertices
-        << " | Alpha: " << alpha
         << endl;
     appendToFile(result.str());
 
 
 }
 
-
+void OursPartitioner::calculate_replication_factor() {
+    // 每个边集的顶点数求和除以总的顶点数
+    int replicas = 0;
+    for (auto & is_mirror : is_mirrors) repv(j, p) {
+            if (is_mirror.get(j)) {
+                replicas++;
+            }
+        }
+    replication_factor = (double) replicas / num_vertices;
+}
