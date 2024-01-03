@@ -229,13 +229,17 @@ public:
 
     void calculate_replication_factor() {
         // 每个边集的顶点数求和除以总的顶点数
-        int replicas = 0;
         for (auto & is_mirror : is_mirrors) repv(j, p) {
                 if (is_mirror.get(j)) {
                     replicas++;
                 }
             }
+        // TODO 这个没法计算replication_factor_1
+        replicas_1 = replicas - is_mirrors.back().popcount();
+        avg_vertex_1 = replicas_1 / (p - 1);
+
         replication_factor = (double) replicas / num_vertices;
+        avg_vertex = replicas / p;
     }
 
     void calculate_alpha() {
@@ -243,6 +247,19 @@ public:
         min_edge = *min_element(occupied.begin(), occupied.end());
 
         alpha = (double ) max_edge * p / (double )num_edges;
+    }
+
+    void calculate_beta() {
+        for (auto & is_mirror : is_mirrors) {
+            LOG(INFO) << "Popcount: " << is_mirror.popcount();
+                if (is_mirror.popcount() > max_vertex) {
+                    max_vertex = is_mirror.popcount();
+                }
+                if (is_mirror.popcount() < min_vertex) {
+                    min_vertex = is_mirror.popcount();
+                }
+            }
+        beta = (double ) max_vertex * p / replicas;
     }
 };
 

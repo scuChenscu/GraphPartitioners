@@ -14,8 +14,10 @@
 #include "algorithms/ldg/ldg.hpp"
 #include "algorithms/ours/ours.hpp"
 #include "algorithms/fennel/fennel.hpp"
-#include "algorithms/model1/model1.hpp""
-#include "algorithms/model2/model2.hpp""
+#include "algorithms/model1/model1.hpp"
+#include "algorithms/model2/model2.hpp"
+#include "algorithms/model3/model3.hpp"
+
 #include <filesystem>
 
 using namespace std;
@@ -28,7 +30,7 @@ int main() {
     double lambda = 1.1;
     double balance_ratio = 1.05;
     // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-    string algorithms[] = {"ne", "model2"};
+    string algorithms[] = {"ne", "model3"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -51,7 +53,7 @@ int main() {
     // 遍历input下的.graph文件
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "=======================================================================" << endl
+    ss << "==============================================================================================================================================" << endl
        << "Time:" << current_time
        << " lambda:" << lambda
        << " Balance ratio:" << balance_ratio
@@ -64,7 +66,7 @@ int main() {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
             string filename = entry.path().string();
-            if (!filename.ends_with(".graph")) continue;
+            if (!filename.ends_with("cats.graph")) continue;
             LOG(INFO) << "Convert " << filename << " to binary edgelist" << endl;
             converter = new Converter(filename);
             convert(filename, converter, memory_size);
@@ -91,6 +93,8 @@ int main() {
                         partitioner = new Model1Partitioner(filename, algorithm, num_partition);
                     else if (algorithm == "model2")
                         partitioner = new Model2Partitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "model3")
+                        partitioner = new Model3Partitioner(filename, algorithm, num_partition);
                     else if (algorithm == "dbh")
                         partitioner = new DbhPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
                     else if (algorithm == "hdrf")

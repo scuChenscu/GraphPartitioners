@@ -27,13 +27,41 @@ protected:
     // 复制因子
     double replication_factor;
 
-    size_t max_edge;
+    size_t max_edge = numeric_limits<size_t>::min();
 
-    size_t min_edge;
+    size_t min_edge = numeric_limits<size_t>::max();
 
     size_t avg_edge;
 
-    double alpha; // 负载平衡因子 = 分区最大边数 * 分区数 / 总边数，应该是越小越好，越小说明越均衡
+    double alpha; // 边负载平衡因子 = 分区最大边数 * 分区数 / 总边数，应该是越小越好，越小说明越均衡
+
+    size_t max_vertex;
+
+    size_t min_vertex;
+
+    size_t avg_vertex;
+
+    double beta; // 顶点负载平衡因子 = 分区最大顶点数 * 分区数 / 总顶点数，应该是越小越好，越小说明越均衡
+
+    int replicas = 0;
+
+    size_t max_vertex_1;
+
+    size_t min_vertex_1;
+
+    size_t avg_vertex_1;
+
+    double beta_1;
+
+    int replicas_1 = 0;
+
+    double replication_factor_1;
+
+    double rho; // 各分区所含顶点数的方差 (pi - A) / p
+    double rho_1;
+
+
+
 public:
     // 分区算法
     virtual void split() = 0;

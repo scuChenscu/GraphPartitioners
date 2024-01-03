@@ -32,14 +32,19 @@ private:
 
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
-    // 这玩意存储啥？像是存储所有的边，edge_t 是一个first second的结构图，所有edges就是存储边的
+    MinHeap<vid_t, vid_t> d; // 顶点的度
+    // 存储边
     std::vector<edge_t> edges;
     // 图结构
     graph_t adj_out, adj_in;
     MinHeap<vid_t, vid_t> min_heap;
     //每个分区边的数量
     std::vector<size_t> occupied;
+    // TODO 需要一个结构存储每个分区顶点的数目
+    vector<size_t> num_vertices_in_partition;
+
     std::vector<vid_t> degrees;
+
     std::vector<int8_t> master;
     std::vector<dense_bitset> is_cores, is_boundarys;
     dense_bitset true_vids;
@@ -185,6 +190,16 @@ private:
             return false;
         return true;
     }
+    bool get_target_vertex(vid_t &vid) {
+        // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
+        // TODO 以上这个计算不太现实
+        // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
+        if (d.size() == 0) return false;
+        vid_t degree;
+        d.get_min(degree, vid);
+        d.remove(vid);
+        return true;
+    }
 
     void assign_remaining();
 
@@ -200,13 +215,17 @@ public:
 
     void calculate_replication_factor() {
         // 每个边集的顶点数求和除以总的顶点数
-        int replicas = 0;
         for (auto & is_mirror : is_mirrors) repv(j, p) {
                 if (is_mirror.get(j)) {
                     replicas++;
                 }
             }
+        // TODO 这个没法计算replication_factor_1
+        replicas_1 = replicas - is_mirrors.back().popcount();
+        avg_vertex_1 = replicas_1 / (p - 1);
+
         replication_factor = (double) replicas / num_vertices;
+        avg_vertex = replicas / p;
     }
 
     void calculate_alpha() {
@@ -214,6 +233,19 @@ public:
         min_edge = *min_element(occupied.begin(), occupied.end());
 
         alpha = (double ) max_edge * p / (double )num_edges;
+    }
+ // TODO 计算方式不对
+    void calculate_rho() {
+        int variance = 0;
+        int variance_1 = 0;
+        // 每个分区减去平均
+        for(int i = 0; i < num_vertices_in_partition.size() - 1; i++) {
+            variance_1 += (num_vertices_in_partition[i] - avg_vertex_1) * (num_vertices_in_partition[i] - avg_vertex_1);
+            variance += (num_vertices_in_partition[i] - avg_vertex) * (num_vertices_in_partition[i] - avg_vertex);
+        }
+        rho_1 = variance_1 / (p - 1);
+        rho = variance + (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex) * (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex);
+        rho /= p;// 最后一个分区的方差 =]
     }
 };
 

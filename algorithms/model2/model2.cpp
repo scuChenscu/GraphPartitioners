@@ -229,19 +229,24 @@ void Model2Partitioner::split() {
 
     LOG(INFO) << "total partition time: " << total_time.get_time() << endl;
     stringstream result;
-
     calculate_replication_factor();
     calculate_alpha();
+    calculate_beta();
     result << "Cost Time: " << total_time.get_time()
            << " | Replication Factor: " << replication_factor
+           << " | Replicas: " << replicas
            << " | Max Edge: " << max_edge
            << " | Min Edge: " << min_edge
            << " | Avg Edge: " << num_edges / p
            << " | Edges: " << num_edges
            << " | Vertices: " << num_vertices
            << " | Alpha: " << alpha
+           << " | Max Vertex: " << max_vertex
+           << " | Min Vertex: " << min_vertex
+           << " | Avg Vertex: " << avg_vertex
+           << " | Avg Vertex Exclude Last Partition: " << avg_vertex_1
+           << " | Beta: " << beta
            << endl;
     appendToFile(result.str());
-
-
 }
+

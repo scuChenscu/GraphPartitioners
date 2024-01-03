@@ -27,6 +27,7 @@ NePartitioner::NePartitioner(std::string input, std::string algorithm, int num_p
     assigned_edges = 0;
     capacity = (double) num_edges * BALANCE_RATIO / p + 1;
     occupied.assign(p, 0);
+    num_vertices_in_partition.assign(p, 0);
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
     is_cores.assign(p, dense_bitset(num_vertices));
@@ -115,7 +116,10 @@ size_t NePartitioner::count_mirrors() {
 void NePartitioner::split() {
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
-
+    d.reserve(num_vertices);
+    repv(vid, num_vertices) {
+        d.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
+    }
     LOG(INFO) << "Start NE partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
@@ -130,18 +134,19 @@ void NePartitioner::split() {
     for (bucket = 0; bucket < p - 1; bucket++) {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
         while (occupied[bucket] < capacity) {
-            vid_t d, vid;
-            if (!min_heap.get_min(d, vid)) { // 当S\C为空时，从V\C中随机选择顶点
+            vid_t degree, vid;
+            if (!min_heap.get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
                 if (!get_free_vertex(vid)) { // 当V\C已经没有顶点，结束算法
                     break;
                 }
                 // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
-                d = adj_out[vid].size() + adj_in[vid].size();
+                degree = adj_out[vid].size() + adj_in[vid].size();
             } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
                 min_heap.remove(vid);
+                d.remove(vid);
             }
             // 把顶点加入到C，即核心集
-            occupy_vertex(vid, d);
+            occupy_vertex(vid, degree);
         }
         //TODO 清空最小堆
         min_heap.clear();
@@ -182,6 +187,7 @@ void NePartitioner::split() {
         // 计算顶点的分区最高得分
         repv(j, p) {
             if (is_mirrors[i].get(j)) {
+                num_vertices_in_partition[j]++; // 每个分区的顶点数
                 double score = (part_degrees[i][j] / (degrees[i] + 1)) + (buckets[j] < capacity ? 1 : 0);
                 if (unique) {
                     which_p = j;
@@ -220,15 +226,24 @@ void NePartitioner::split() {
 
     calculate_replication_factor();
     calculate_alpha();
+    calculate_rho();
     result << "Cost Time: " << total_time.get_time()
-        << " | Replication Factor: " << replication_factor
-        << " | Max Edge: " << max_edge
-        << " | Min Edge: " << min_edge
-        << " | Avg Edge: " << num_edges / p
-        << " | Edges: " << num_edges
-        << " | Vertices: " << num_vertices
-        << " | Alpha: " << alpha
-        << endl;
+           << " | Replication Factor: " << replication_factor
+           << " | Alpha: " << alpha
+           << " | Replicas: " << replicas
+           << " | Rho: " << rho
+           << " | Rho Exclude Last Partition: " << rho_1
+           << " | Max Edge: " << max_edge
+           << " | Min Edge: " << min_edge
+           << " | Avg Edge: " << num_edges / p
+           << " | Edges: " << num_edges
+           << " | Vertices: " << num_vertices
+           //        << " | Max Vertex: " << max_vertex
+           //        << " | Min Vertex: " << min_vertex
+           << " | Avg Vertex: " << avg_vertex
+           << " | Avg Vertex Exclude Last Partition: " << avg_vertex_1
+           // << " | Beta: " << beta
+           << endl;
     appendToFile(result.str());
 
 
