@@ -6,7 +6,7 @@
 #include <vector>
 // #include <parallel/algorithm>
 
-#include "../../utils/util.hpp"
+#include "util.hpp"
 
 //按照紧凑排列的方式，占用内存
 struct uint40_t {

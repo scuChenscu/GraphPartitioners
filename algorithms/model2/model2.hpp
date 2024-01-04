@@ -12,8 +12,8 @@
 
 #include "../../utils/dense_bitset.hpp"
 #include "../../partitioner/partitioner.hpp"
-#include "../ne/graph.hpp"
-#include "../ne/min_heap.hpp"
+#include "../../utils/graph.hpp"
+#include "../../utils/min_heap.hpp"
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
 

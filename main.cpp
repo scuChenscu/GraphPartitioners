@@ -17,7 +17,7 @@
 #include "algorithms/model1/model1.hpp"
 #include "algorithms/model2/model2.hpp"
 #include "algorithms/model3/model3.hpp"
-
+#include "algorithms/model4/model4.hpp"
 #include <filesystem>
 
 using namespace std;
@@ -25,12 +25,13 @@ namespace fs = std::filesystem;
 
 int main() {
     // int num_partition = 5;
-    int partitions[] = {2, 4, 8, 16, 32, 64};
+    // int partitions[] = {2, 4, 8, 16, 32, 64};
+    int partitions[] = {16, 32, 64};
     int memory_size = 4096;
     double lambda = 1.1;
     double balance_ratio = 1.05;
     // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-    string algorithms[] = {"ne", "model3"};
+    string algorithms[] = {"ne", "model4"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -66,7 +67,7 @@ int main() {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
             string filename = entry.path().string();
-            if (!filename.ends_with("cats.graph")) continue;
+            if (!filename.ends_with("mdual.graph")) continue;
             LOG(INFO) << "Convert " << filename << " to binary edgelist" << endl;
             converter = new Converter(filename);
             convert(filename, converter, memory_size);

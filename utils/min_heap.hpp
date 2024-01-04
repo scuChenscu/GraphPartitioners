@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "../../utils/util.hpp"
+#include "util.hpp"
 
 // 模板函数，有点类似Java中的泛型
 template<typename ValueType, typename KeyType, typename IdxType = vid_t>

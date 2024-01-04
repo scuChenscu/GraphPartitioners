@@ -9,7 +9,9 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
+#include <unordered_map>
+#include <set>
+#include <queue>
 #include "../../utils/dense_bitset.hpp"
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/graph.hpp"
@@ -17,18 +19,21 @@
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
 
+
+using namespace std;
+
 /* Neighbor Expansion (NE) */
-class Model1Partitioner : public Partitioner {
+class Model4Partitioner : public Partitioner {
 private:
-    // TODO 因为NE算法在设定负载均衡的时候，是直接给个参数，会导致最后一个分区可能出现顶点数较少的情况，导致负载均衡做的不够好
-    // 如果我们能够在图遍历的过程中，动态地计算到这个负载均衡的值，可能实现边割率和负载均衡的同时优化
-    // 比如根据当前已分配顶点跟外界的边数，当前分区负载距离标准负载的距离，来动态地调整负载均衡
-    // 当前边数，剩余边数
-
-    // 连通分量最接近的里面选，但是这样不一定是最优的
-
-    // 能否通过融合的方式？ 就是很多小分区，融合成符合要求的大分区，NP难的问题
     const double BALANCE_RATIO = 1.00;
+
+    unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
+    // TODO 不应该用set，应该用vector
+    set<vid_t> v_set; // 重新索引时已经被处理的顶点
+
+    unordered_map<vid_t, set<vid_t>> adj_list; // 邻接表
+
+    queue<vid_t> v_queue;
 
     std::string input;
 
@@ -40,24 +45,23 @@ private:
 
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
-    // 这玩意存储啥？像是存储所有的边，edge_t 是一个first second的结构图，所有edges就是存储边的
+    MinHeap<vid_t, vid_t> d; // 顶点的度
+    // 存储边
     std::vector<edge_t> edges;
     // 图结构
     graph_t adj_out, adj_in;
     MinHeap<vid_t, vid_t> min_heap;
     //每个分区边的数量
     std::vector<size_t> occupied;
-    // 顶点的度
+    // TODO 需要一个结构存储每个分区顶点的数目
+    vector<size_t> num_vertices_in_partition;
+
     std::vector<vid_t> degrees;
-    MinHeap<vid_t, vid_t> d;
+
     std::vector<int8_t> master;
     std::vector<dense_bitset> is_cores, is_boundarys;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
-
-    vector<int> connected_components;
-
-    int components;
 
     //随机数生成器
     //std::random_device rd;
@@ -101,8 +105,6 @@ private:
         occupied[partition]++;
         degrees[from]--;
         degrees[to]--;
-//        d.decrease_key(from);
-//        d.decrease_key(to);
     }
 
     void add_boundary(vid_t vid) {
@@ -219,28 +221,101 @@ private:
 
     size_t count_mirrors();
 
+    void sub_split(int i);
+
 public:
-    Model1Partitioner(std::string input, std::string algorithm, int num_partition);
+    Model4Partitioner(std::string input, std::string algorithm, int num_partition);
 
     void split() override;
 
 
     void calculate_replication_factor() {
         // 每个边集的顶点数求和除以总的顶点数
-        int replicas = 0;
-        for (auto & is_mirror : is_mirrors) repv(j, p) {
+        for (auto &is_mirror: is_mirrors)
+            repv(j, p) {
                 if (is_mirror.get(j)) {
                     replicas++;
                 }
             }
+        // TODO 这个没法计算replication_factor_1
+        replicas_1 = replicas - is_mirrors.back().popcount();
+        avg_vertex_1 = replicas_1 / (p - 1);
+
         replication_factor = (double) replicas / num_vertices;
+        avg_vertex = replicas / p;
     }
 
     void calculate_alpha() {
         max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
         min_edge = *min_element(occupied.begin(), occupied.end());
 
-        alpha = (double ) max_edge * p / (double )num_edges;
+        alpha = (double) max_edge * p / (double) num_edges;
+    }
+
+    // TODO 计算方式不对
+    void calculate_rho() {
+        int variance = 0;
+        int variance_1 = 0;
+        // 每个分区减去平均
+        for (int i = 0; i < num_vertices_in_partition.size() - 1; i++) {
+            variance_1 += (num_vertices_in_partition[i] - avg_vertex_1) * (num_vertices_in_partition[i] - avg_vertex_1);
+            variance += (num_vertices_in_partition[i] - avg_vertex) * (num_vertices_in_partition[i] - avg_vertex);
+        }
+        rho_1 = variance_1 / (p - 1);
+        rho = variance + (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex) *
+                         (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex);
+        rho /= p;// 最后一个分区的方差 =]
+    }
+
+    // 广度遍历，重新索引，用于将顶点分块
+    void re_index() {
+        // 随机选择顶点，进行广度遍历，重新索引
+        vid_t index = 0;
+        vid_t vid = dis(gen);
+        // 基于该顶点进行深度遍历，对每个顶点重新索引
+        v_queue.push(vid);
+        while (!v_queue.empty()) {
+            vid_t v = v_queue.front();
+            v_queue.pop();
+            // 将v加入到indices,重新索引
+            indices.insert(std::pair<vid_t, vid_t>(index++, v));
+
+            // 获取v的邻居顶点
+            set < vid_t > neighbor_set = adj_list.find(v)->second;
+            // 将顶点v的邻居加入到队列中，注意去重
+            std::set<int> differenceSet;
+
+            // 使用 std::set_difference 求差值
+            std::set_difference(neighbor_set.begin(), neighbor_set.end(),
+                                v_set.begin(), v_set.end(),
+                                std::inserter(differenceSet, differenceSet.begin()));
+            // 将neighbor_set加入v_queue和v_set中
+            for (auto &i: differenceSet) {
+                v_queue.push(i);
+                v_set.insert(i);
+            }
+
+        }
+    }
+
+    void construct_adj_list(vector<edge_t> &edges) {
+        // 遍历边集，建立每个顶点的邻居集合
+        for (auto &i: edges) {
+            if (adj_list.contains(i.first)) {
+                adj_list.find(i.first)->second.insert(i.second);
+            } else {
+                std::set < vid_t > set;
+                set.insert(i.second);
+                adj_list[i.first] = set;
+            }
+            if (adj_list.contains(i.second)) {
+                adj_list.find(i.second)->second.insert(i.first);
+            } else {
+                std::set < vid_t > set;
+                set.insert(i.first);
+                adj_list[i.second] = set;
+            }
+        }
     }
 };
 

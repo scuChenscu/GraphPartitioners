@@ -9,18 +9,30 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
+#include <unordered_map>
+#include <set>
+#include <queue>
 #include "../../utils/dense_bitset.hpp"
 #include "../../partitioner/partitioner.hpp"
-#include "graph.hpp"
-#include "min_heap.hpp"
+#include "../../utils/graph.hpp"
+#include "../../utils/min_heap.hpp"
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
+
+
+using namespace std;
 
 /* Neighbor Expansion (NE) */
 class NePartitioner : public Partitioner {
 private:
     const double BALANCE_RATIO = 1.00;
+
+    unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
+    set<vid_t> v_set; // 重新索引时已经被处理的顶点
+
+    unordered_map<vid_t, set<vid_t>> adj_list; // 邻接表
+
+    queue<vid_t> v_queue;
 
     std::string input;
 
@@ -190,6 +202,7 @@ private:
             return false;
         return true;
     }
+
     bool get_target_vertex(vid_t &vid) {
         // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
         // TODO 以上这个计算不太现实
@@ -215,7 +228,8 @@ public:
 
     void calculate_replication_factor() {
         // 每个边集的顶点数求和除以总的顶点数
-        for (auto & is_mirror : is_mirrors) repv(j, p) {
+        for (auto &is_mirror: is_mirrors)
+            repv(j, p) {
                 if (is_mirror.get(j)) {
                     replicas++;
                 }
@@ -232,20 +246,72 @@ public:
         max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
         min_edge = *min_element(occupied.begin(), occupied.end());
 
-        alpha = (double ) max_edge * p / (double )num_edges;
+        alpha = (double) max_edge * p / (double) num_edges;
     }
- // TODO 计算方式不对
+
+    // TODO 计算方式不对
     void calculate_rho() {
         int variance = 0;
         int variance_1 = 0;
         // 每个分区减去平均
-        for(int i = 0; i < num_vertices_in_partition.size() - 1; i++) {
+        for (int i = 0; i < num_vertices_in_partition.size() - 1; i++) {
             variance_1 += (num_vertices_in_partition[i] - avg_vertex_1) * (num_vertices_in_partition[i] - avg_vertex_1);
             variance += (num_vertices_in_partition[i] - avg_vertex) * (num_vertices_in_partition[i] - avg_vertex);
         }
         rho_1 = variance_1 / (p - 1);
-        rho = variance + (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex) * (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex);
+        rho = variance + (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex) *
+                         (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex);
         rho /= p;// 最后一个分区的方差 =]
+    }
+    // 广度遍历，重新索引，用于将顶点分块
+    void re_index() {
+        // 随机选择顶点，进行广度遍历，重新索引
+        vid_t index = 0;
+        vid_t vid = dis(gen);
+        // 基于该顶点进行深度遍历，对每个顶点重新索引
+        v_queue.push(vid);
+        while (!v_queue.empty()) {
+            vid_t v = v_queue.front();
+            v_queue.pop();
+            // 将v加入到indices,重新索引
+            indices.insert(std::pair<vid_t, vid_t>(index++, v));
+
+            // 获取v的邻居顶点
+            set < vid_t > neighbor_set = adj_list.find(v)->second;
+            // 将顶点v的邻居加入到队列中，注意去重
+            std::set<int> differenceSet;
+
+            // 使用 std::set_difference 求差值
+            std::set_difference(neighbor_set.begin(), neighbor_set.end(),
+                                v_set.begin(), v_set.end(),
+                                std::inserter(differenceSet, differenceSet.begin()));
+            // 将neighbor_set加入v_queue和v_set中
+            for (auto &i: differenceSet) {
+                v_queue.push(i);
+                v_set.insert(i);
+            }
+
+        }
+    }
+
+    void construct_adj_list(vector<edge_t> &edges) {
+        // 遍历边集，建立每个顶点的邻居集合
+        for (auto &i: edges) {
+            if (adj_list.contains(i.first)) {
+                adj_list.find(i.first)->second.insert(i.second);
+            } else {
+                std::set < vid_t > set;
+                set.insert(i.second);
+                adj_list[i.first] = set;
+            }
+            if (adj_list.contains(i.second)) {
+                adj_list.find(i.second)->second.insert(i.first);
+            } else {
+                std::set < vid_t > set;
+                set.insert(i.first);
+                adj_list[i.second] = set;
+            }
+        }
     }
 };
 
