@@ -27,7 +27,9 @@ class Model4Partitioner : public Partitioner {
 private:
     const double BALANCE_RATIO = 1.00;
 
-    unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
+    const double CAPACITY_RATIO = 0.50;
+
+    vector<vid_t> indices; // new_vid, old_vid
     // TODO 不应该用set，应该用vector
     set<vid_t> v_set; // 重新索引时已经被处理的顶点
 
@@ -35,8 +37,9 @@ private:
 
     queue<vid_t> v_queue;
 
-    std::string input;
 
+    std::string input;
+    vid_t num_p_v;
     vid_t num_vertices;
     size_t num_edges, assigned_edges;
     int p, bucket;
@@ -51,6 +54,9 @@ private:
     // 图结构
     graph_t adj_out, adj_in;
     MinHeap<vid_t, vid_t> min_heap;
+    // 为每个分区维护一个min_heap
+    std::vector<MinHeap<vid_t, vid_t> > min_heaps;
+
     //每个分区边的数量
     std::vector<size_t> occupied;
     // TODO 需要一个结构存储每个分区顶点的数目
@@ -63,11 +69,14 @@ private:
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
 
+    dense_bitset visited;
+
     //随机数生成器
     //std::random_device rd;
     std::mt19937 gen;
     //均匀分布区间
     std::uniform_int_distribution<vid_t> dis;
+    std::uniform_int_distribution<vid_t> sub_dis;
 
     int check_edge(const edge_t *e) {
         rep (i, bucket) {
@@ -120,6 +129,7 @@ private:
 
         // 如果顶点没有在核心集中，直接把顶点的度数据加入到最小堆
         if (!is_core.get(vid)) {
+            // TODO 这个要修改
             min_heap.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
         }
 
@@ -134,6 +144,7 @@ private:
                     if (is_core.get(u)) { // 如果顶点在核心集中
                         assign_edge(bucket, direction ? vid : u,
                                     direction ? u : vid);
+                        // TODO 这个要修改
                         min_heap.decrease_key(vid); // 默认移除一条边
                         edges[neighbors[i].v].remove();
                         //TODO 交换到最后位置，然后长度减1
@@ -204,6 +215,30 @@ private:
         return true;
     }
 
+    bool sub_get_free_vertex(vid_t &vid, vid_t i) {
+        //随机选择一个节点
+        vid_t min = i * num_p_v;
+        vid = sub_dis(gen) + min; // 生成 1000 / 10 = 100；0-99
+        vid_t max = (i + 1) * num_p_v;
+
+        vid_t count = min; // 像是一个随机数，用来帮助选择随机顶点
+        //TODO 什么叫已经超出平衡范围
+        //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
+        while (count < max &&
+               (adj_out[vid].size() + adj_in[vid].size() == 0 ||
+                adj_out[vid].size() + adj_in[vid].size() >
+                2 * average_degree ||
+                is_cores[bucket].get(vid))) {
+            // 应该是一个链式寻找的过程
+            vid = (vid + ++count) % max + min;
+        }
+        if (count == max)
+            return false;
+        // TODO 这个得从indices中取值
+        vid = indices[vid];
+        return true;
+    }
+
     bool get_target_vertex(vid_t &vid) {
         // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
         // TODO 以上这个计算不太现实
@@ -269,33 +304,33 @@ public:
 
     // 广度遍历，重新索引，用于将顶点分块
     void re_index() {
+        auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
         // 随机选择顶点，进行广度遍历，重新索引
         vid_t index = 0;
         vid_t vid = dis(gen);
         // 基于该顶点进行深度遍历，对每个顶点重新索引
         v_queue.push(vid);
         while (!v_queue.empty()) {
+            // LOG(INFO) << index;
             vid_t v = v_queue.front();
             v_queue.pop();
+            if (visited.get(v)) {
+                continue;
+            }
+            visited.set_bit_unsync(v);
             // 将v加入到indices,重新索引
-            indices.insert(std::pair<vid_t, vid_t>(index++, v));
+            indices[index++] = v;
 
             // 获取v的邻居顶点
             set < vid_t > neighbor_set = adj_list.find(v)->second;
-            // 将顶点v的邻居加入到队列中，注意去重
-            std::set<int> differenceSet;
-
-            // 使用 std::set_difference 求差值
-            std::set_difference(neighbor_set.begin(), neighbor_set.end(),
-                                v_set.begin(), v_set.end(),
-                                std::inserter(differenceSet, differenceSet.begin()));
             // 将neighbor_set加入v_queue和v_set中
-            for (auto &i: differenceSet) {
+            for (auto &i: neighbor_set) {
                 v_queue.push(i);
-                v_set.insert(i);
             }
-
         }
+        auto end = std::chrono::high_resolution_clock::now(); // 记录结束时间
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // 计算时间差
+        LOG(INFO) << "re_index time: " << duration.count() << "ms" << endl;
     }
 
     void construct_adj_list(vector<edge_t> &edges) {

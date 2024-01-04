@@ -28,8 +28,11 @@ Model4Partitioner::Model4Partitioner(std::string input, std::string algorithm, i
     capacity = (double) num_edges * BALANCE_RATIO / p + 1;
     occupied.assign(p, 0);
     num_vertices_in_partition.assign(p, 0);
+    num_p_v = num_vertices / p;
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
+    visited = dense_bitset(num_vertices);
+    indices.resize(num_vertices);
     is_cores.assign(p, dense_bitset(num_vertices));
     is_boundarys.assign(p, dense_bitset(num_vertices));
     true_vids.resize(num_vertices);
@@ -37,7 +40,8 @@ Model4Partitioner::Model4Partitioner(std::string input, std::string algorithm, i
     master.assign(num_vertices, -1);
     dis.param(
             std::uniform_int_distribution<vid_t>::param_type(0, num_vertices - 1));
-
+    sub_dis.param(
+            std::uniform_int_distribution<vid_t>::param_type(0, num_vertices / p - 1));
 
     edges.resize(num_edges);
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
@@ -115,16 +119,20 @@ size_t Model4Partitioner::count_mirrors() {
 
 void Model4Partitioner::split() {
     // 构造顶点的邻接表
+    LOG(INFO) << "construct_adj_list" << endl;
     construct_adj_list(edges);
     // 重新索引
+    LOG(INFO) << "re_index" << endl;
     re_index();
     // 每个分区的理论顶点数
-    int num_p_v = num_vertices / p;
     // 0, num_vertices/p, 2*num_vertices/p, 3*num_vertices/p,...
     // p个分区，每个分区的顶点范围是[p * i, p * (i + 1) - 1]
 
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
+
+    min_heaps.resize(p, MinHeap<vid_t, vid_t>());
+
     d.reserve(num_vertices);
     repv(vid, num_vertices) {
         d.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
@@ -154,7 +162,9 @@ void Model4Partitioner::split() {
     for (int i = 0; i < numThreads; ++i) {
         threads[i].join();
     }
+    LOG(INFO) << "Model4 multi-partitioning finished!";
 
+    min_heap = min_heaps[0];
     // 前p-1个分区
     for (bucket = 0; bucket < p - 1; bucket++) {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
@@ -274,9 +284,42 @@ void Model4Partitioner::split() {
 
 }
 
-void Model4Partitioner::sub_split(int i) {
+void Model4Partitioner::sub_split(const int p_i) {
     // 根据i的值从v_set中获取指定范围的顶点集合，选择不同的起始点
     // 然后在该顶点集合上执行NE算法
+    // 当前分区的边数小于负载上限时，添加顶点到核心集C
+    MinHeap<vid_t, vid_t> cur_min_heap = min_heaps[p_i];
+    // 设定一个上限
+    while (occupied[p_i] < capacity * CAPACITY_RATIO) {
+        vid_t degree, vid;
+        if (!cur_min_heap.get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
+            if (!sub_get_free_vertex(vid, p_i)) { // 当V\C已经没有顶点，结束算法
+                break;
+            }
+            // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
+            degree = adj_out[vid].size() + adj_in[vid].size();
+        } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
+            cur_min_heap.remove(vid);
+            // d.remove(vid);
+        }
+        // 把顶点加入到C，即核心集
+        occupy_vertex(vid, degree);
+    }
+    //TODO 清空最小堆
+    // min_heap.clear();
 
+    //TODO 为什么要全局扫描，移除已经分配的邻边
+    rep(direction, 2) repv(vid, num_vertices) {
+            // 获取所有顶点的邻接表
+            adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
+            for (size_t i = 0; i < neighbors.size();) {
+                if (edges[neighbors[i].v].valid()) {
+                    i++;
+                } else {
+                    std::swap(neighbors[i], neighbors.back());
+                    neighbors.pop_back();
+                }
+            }
+        }
 }
 

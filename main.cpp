@@ -31,7 +31,7 @@ int main() {
     double lambda = 1.1;
     double balance_ratio = 1.05;
     // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-    string algorithms[] = {"ne", "model4"};
+    string algorithms[] = { "model4"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -96,6 +96,8 @@ int main() {
                         partitioner = new Model2Partitioner(filename, algorithm, num_partition);
                     else if (algorithm == "model3")
                         partitioner = new Model3Partitioner(filename, algorithm, num_partition);
+                    else if (algorithm == "model4")
+                        partitioner = new Model4Partitioner(filename, algorithm, num_partition);
                     else if (algorithm == "dbh")
                         partitioner = new DbhPartitioner(filename, algorithm, num_partition, memory_size, shuffle);
                     else if (algorithm == "hdrf")
