@@ -174,6 +174,17 @@ void Model4Partitioner::split() {
     edge_ofstream.close();
     adj_list.clear();
     visited.clear();
+
+    part_degrees.clear();
+    is_cores.clear();
+    is_boundarys.clear();
+    is_mirrors.clear();
+    true_vids.clear();
+    min_heap.clear();
+    edges.clear();
+    degrees.clear();
+    delete &adj_out;
+    // delete &adj_in;
     // v_set.clear();
 
     return;

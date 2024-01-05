@@ -1,5 +1,6 @@
 #include "graph.hpp"
 
+
 // build方法，传入边集合
 void graph_t::build(const std::vector<edge_t> &edges) {
     // 构造过程
@@ -57,4 +58,3 @@ void graph_t::build_reverse(const std::vector<edge_t> &edges) {
     for (size_t i = 0; i < edges.size(); i++)
         vdata[edges[i].second].push_back(i);
 }
-

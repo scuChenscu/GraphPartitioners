@@ -12,6 +12,8 @@ link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
+        partitioner/partitioner.hpp
+        baseGraph/base_graph.hpp
         utils/graph.cpp
         algorithms/ne/ne.cpp
         algorithms/ours/ours.cpp

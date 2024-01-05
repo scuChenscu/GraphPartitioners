@@ -18,15 +18,14 @@
 #include "../../utils/min_heap.hpp"
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
-
+#include "../../partitioner/edgePartitioner.hpp"
 
 using namespace std;
 
 /* Neighbor Expansion (NE) */
-class Model4Partitioner : public Partitioner {
+class Model4Partitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
-
     const double CAPACITY_RATIO = 0.50;
 
     vector<vid_t> indices; // new_vid, old_vid
@@ -34,7 +33,6 @@ private:
     // set<vid_t> v_set; // 重新索引时已经被处理的顶点
 
     unordered_map<vid_t, set<vid_t>> adj_list; // 邻接表
-
     string input;
     vid_t num_p_v;
     vid_t num_vertices;
@@ -49,7 +47,8 @@ private:
     // 存储边
     vector<edge_t> edges;
     // 图结构
-    graph_t adj_out, adj_in;
+    graph_t adj_out;
+    graph_t adj_in;
     MinHeap<vid_t, vid_t> min_heap;
     // 为每个分区维护一个min_heap
     vector<MinHeap<vid_t, vid_t> > min_heaps;
@@ -344,45 +343,6 @@ public:
 
     void split() override;
 
-
-    void calculate_replication_factor() {
-        // 每个边集的顶点数求和除以总的顶点数
-        for (auto &is_mirror: is_mirrors)
-            repv(j, p) {
-                if (is_mirror.get(j)) {
-                    replicas++;
-                }
-            }
-        // TODO 这个没法计算replication_factor_1
-        replicas_1 = replicas - is_mirrors.back().popcount();
-        avg_vertex_1 = replicas_1 / (p - 1);
-
-        replication_factor = (double) replicas / num_vertices;
-        avg_vertex = replicas / p;
-    }
-
-    void calculate_alpha() {
-        max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
-        min_edge = *min_element(occupied.begin(), occupied.end());
-
-        alpha = (double) max_edge * p / (double) num_edges;
-    }
-
-    // TODO 计算方式不对
-    void calculate_rho() {
-        int variance = 0;
-        int variance_1 = 0;
-        // 每个分区减去平均
-        for (int i = 0; i < num_vertices_in_partition.size() - 1; i++) {
-            variance_1 += (num_vertices_in_partition[i] - avg_vertex_1) * (num_vertices_in_partition[i] - avg_vertex_1);
-            variance += (num_vertices_in_partition[i] - avg_vertex) * (num_vertices_in_partition[i] - avg_vertex);
-        }
-        rho_1 = variance_1 / (p - 1);
-        rho = variance + (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex) *
-                         (num_vertices_in_partition[num_vertices_in_partition.size() - 1] - avg_vertex);
-        rho /= p;// 最后一个分区的方差 =]
-    }
-
     // 广度遍历，重新索引，用于将顶点分块
     void re_index() {
         queue<vid_t> v_queue;
@@ -415,24 +375,6 @@ public:
         LOG(INFO) << "re_index time: " << duration.count() << "ms" << endl;
     }
 
-    void construct_adj_list(vector<edge_t> &edges) {
-        // 遍历边集，建立每个顶点的邻居集合
-        for (auto &i: edges) {
-            if (adj_list.contains(i.first)) {
-                adj_list.find(i.first)->second.insert(i.second);
-            } else {
-                std::set < vid_t > set;
-                set.insert(i.second);
-                adj_list[i.first] = set;
-            }
-            if (adj_list.contains(i.second)) {
-                adj_list.find(i.second)->second.insert(i.first);
-            } else {
-                std::set < vid_t > set;
-                set.insert(i.first);
-                adj_list[i.second] = set;
-            }
-        }
-    }
+
 };
 

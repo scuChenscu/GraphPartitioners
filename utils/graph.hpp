@@ -59,7 +59,7 @@ private:
     std::vector<adjlist_t> vdata;
 
 public:
-    graph_t() : num_vertices(0), nedges(0), neighbors(NULL) {}
+    graph_t() : num_vertices(0), nedges(0), neighbors(nullptr) {}
 
     // 析构函数
     ~graph_t() {
@@ -72,7 +72,7 @@ public:
         vdata.resize(num_vertices);
     }
 
-    size_t num_edges() const { return nedges; }
+    [[nodiscard]] size_t num_edges() const { return nedges; }
 
     void build(const std::vector<edge_t> &edges);
 

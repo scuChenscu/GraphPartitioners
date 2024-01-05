@@ -26,13 +26,13 @@ namespace fs = std::filesystem;
 int main() {
     // int num_partition = 5;
     // int partitions[] = {2, 4, 8, 16, 32, 64};
-    int partitions[] = { 8};
+    int partitions[] = { 8, 32};
     // int partitions[] = {64};
     int memory_size = 4096;
     double lambda = 1.1;
     double balance_ratio = 1.05;
     // string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-    string algorithms[] = { "ne"};
+    string algorithms[] = { "model4"};
     // 输入文件夹，存.graph文件，文件首行为顶点数 边数；其他行为邻接表
     string input = "../graphs/input";
     // TODO 需要一个文件，追加输出运行结果
@@ -116,7 +116,7 @@ int main() {
                         continue;
                     }
                     partitioner->split();
-                    // delete partitioner;
+                    delete partitioner;
                 }
             }
         }
