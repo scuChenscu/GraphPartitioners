@@ -11,7 +11,7 @@
 //按照紧凑排列的方式，占用内存
 struct uint40_t {
     //占用位段
-    uint64_t v: 40; // 定义了64，但是只使用40
+    uint64_t v: 40; // 定义了64，但是只使用40，这个v存储的是边的id
 } __attribute__((packed));
 
 class adjlist_t {
@@ -55,6 +55,7 @@ private:
     //neighbors是构造vdata的一个初始化数组
     uint40_t *neighbors; // 一个指向uint40_t类型数据的指针
     //TODO vdata使用adjlist_t来存储每个顶点的邻边
+    //
     std::vector<adjlist_t> vdata;
 
 public:

@@ -31,14 +31,11 @@ private:
 
     vector<vid_t> indices; // new_vid, old_vid
     // TODO 不应该用set，应该用vector
-    set<vid_t> v_set; // 重新索引时已经被处理的顶点
+    // set<vid_t> v_set; // 重新索引时已经被处理的顶点
 
     unordered_map<vid_t, set<vid_t>> adj_list; // 邻接表
 
-    queue<vid_t> v_queue;
-
-
-    std::string input;
+    string input;
     vid_t num_p_v;
     vid_t num_vertices;
     size_t num_edges, assigned_edges;
@@ -48,24 +45,26 @@ private:
 
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
-    MinHeap<vid_t, vid_t> d; // 顶点的度
+    // MinHeap<vid_t, vid_t> d; // 顶点的度
     // 存储边
-    std::vector<edge_t> edges;
+    vector<edge_t> edges;
     // 图结构
     graph_t adj_out, adj_in;
     MinHeap<vid_t, vid_t> min_heap;
     // 为每个分区维护一个min_heap
-    std::vector<MinHeap<vid_t, vid_t> > min_heaps;
+    vector<MinHeap<vid_t, vid_t> > min_heaps;
 
     //每个分区边的数量
-    std::vector<size_t> occupied;
+    vector<size_t> occupied;
     // TODO 需要一个结构存储每个分区顶点的数目
     vector<size_t> num_vertices_in_partition;
 
-    std::vector<vid_t> degrees;
+    vector<vid_t> degrees;
 
-    std::vector<int8_t> master;
-    std::vector<dense_bitset> is_cores, is_boundarys;
+    vector<int8_t> master;
+
+    // is_cores和is_boundarys是每个分区独立的dense_bitset
+    vector<dense_bitset> is_cores, is_boundarys;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
 
@@ -73,10 +72,10 @@ private:
 
     //随机数生成器
     //std::random_device rd;
-    std::mt19937 gen;
+    mt19937 gen;
     //均匀分布区间
-    std::uniform_int_distribution<vid_t> dis;
-    std::uniform_int_distribution<vid_t> sub_dis;
+    uniform_int_distribution<vid_t> dis;
+    uniform_int_distribution<vid_t> sub_dis;
 
     int check_edge(const edge_t *e) {
         rep (i, bucket) {
@@ -128,8 +127,8 @@ private:
         is_boundary.set_bit_unsync(vid);
 
         // 如果顶点没有在核心集中，直接把顶点的度数据加入到最小堆
+        // 因为在核心集中的顶点已经不需要处理了
         if (!is_core.get(vid)) {
-            // TODO 这个要修改
             min_heap.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
         }
 
@@ -170,6 +169,56 @@ private:
         }
     }
 
+    void sub_add_boundary(vid_t vid, int cur_p) {
+        // 获取到当前分区的核心集和边界集
+        auto &is_core = is_cores[cur_p];
+        auto &is_boundary = is_boundarys[cur_p];
+        // 当从S\C引入顶点时，它的邻居顶点可能已经加入到边界集
+        if (is_boundary.get(vid)) return;
+        // 2. 如果顶点不在边界集，把顶点加入到边界集
+        is_boundary.set_bit_unsync(vid);
+        // 当我们引入新的顶点到边界集的时候，需要把它的度信息加入到最小堆
+        if (!is_core.get(vid)) {
+            min_heaps[cur_p].insert(adj_out[vid].size() + adj_in[vid].size(), vid);
+
+        }
+
+        // 3. 把顶点的在边界集的邻居顶点的边加入到当前边集
+        rep (direction, 2) {
+            adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
+            // 遍历顶点的邻边
+            for (size_t i = 0; i < neighbors.size();) {
+                if (edges[neighbors[i].v].valid()) {
+                    vid_t &u = direction ? edges[neighbors[i].v].second : edges[neighbors[i].v].first;
+                    if (is_core.get(u)) { // 如果顶点在核心集中
+                        assign_edge(cur_p, direction ? vid : u,
+                                    direction ? u : vid);
+                        min_heaps[cur_p].decrease_key(vid); // 默认移除一条边
+                        edges[neighbors[i].v].remove();
+                        //TODO 交换到最后位置，然后长度减1
+                        std::swap(neighbors[i], neighbors.back());
+                        neighbors.pop_back();
+                    } else if (is_boundary.get(u) &&
+                               occupied[cur_p] < capacity * CAPACITY_RATIO) { // 如果顶点在边界集中，并且当前分区负载没有达到上限
+                        // 将边加入边集
+                        assign_edge(cur_p, direction ? vid : u, direction ? u : vid);
+                        min_heaps[cur_p].decrease_key(vid);
+                        min_heaps[cur_p].decrease_key(u);
+                        edges[neighbors[i].v].remove();
+                        std::swap(neighbors[i], neighbors.back());
+                        neighbors.pop_back();
+                    } else
+                        i++;
+                } else {
+                    //swap是pop的前提，先交换到最后位置然后把长度减1
+                    std::swap(neighbors[i], neighbors.back());
+                    neighbors.pop_back();
+                }
+            }
+        }
+    }
+
+
     // 根据算法定义，把顶点加入的核心集时，需要把它的所有边都加入到边集合中
     void occupy_vertex(vid_t vid, vid_t d) {
         CHECK(!is_cores[bucket].get(vid)) << "add " << vid << " to core again";
@@ -196,6 +245,35 @@ private:
         adj_in[vid].clear();
     }
 
+    void sub_occupy_vertex(vid_t vid, vid_t d, int cur_p) {
+        CHECK(!is_cores[cur_p].get(vid)) << "add " << vid << " to core again";
+        // 核心集是vector<dense_bitset>，dense_bitset是一个稠密位图
+        // 对位图的vid位置置1，表示vid被分配到bucket分区
+
+        // 1. 把顶点加入核心集和边界集，不需要考虑重复设置的场景
+        is_cores[cur_p].set_bit_unsync(vid);
+        // is_boundarys[cur_p].set_bit_unsync(vid);
+        // 顶点的来源有两种情况，一是从V，二是从S\C
+        // 如果顶点的度为0，不需要处理
+        if (d == 0) return;
+        sub_add_boundary(vid, cur_p);
+
+        // 2. 遍历vid的邻居顶点，把不属于边界集的顶点加入到边界集
+        for (auto &i: adj_out[vid]) {
+            if (edges[i.v].valid()) { // 因为是边分区算法，所以我们不能引入重复的边，只需要考虑未分配的边
+                sub_add_boundary(edges[i.v].second, cur_p);
+            }
+        }
+
+        adj_out[vid].clear();
+
+        for (auto &i: adj_in[vid]) {
+            if (edges[i.v].valid())
+                sub_add_boundary(edges[i.v].first, cur_p);
+        }
+        adj_in[vid].clear();
+    }
+
 
     bool get_free_vertex(vid_t &vid) {
         //随机选择一个节点
@@ -215,27 +293,30 @@ private:
         return true;
     }
 
-    bool sub_get_free_vertex(vid_t &vid, vid_t i) {
+    bool sub_get_free_vertex(vid_t &vid, vid_t cur_p) {
         //随机选择一个节点
-        vid_t min = i * num_p_v;
-        vid = sub_dis(gen) + min; // 生成 1000 / 10 = 100；0-99
-        vid_t max = (i + 1) * num_p_v;
+        vid_t min = cur_p * num_p_v;
+        vid_t index = sub_dis(gen); // 生成 1000 / 10 = 100；0-99
+        vid_t max = (cur_p + 1) * num_p_v;
+        // 选择数据范围在[min, max]
 
-        vid_t count = min; // 像是一个随机数，用来帮助选择随机顶点
+        vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
+
+        vid = indices[min + index];
+
         //TODO 什么叫已经超出平衡范围
         //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
-        while (count < max &&
+        while (count < num_p_v &&
                (adj_out[vid].size() + adj_in[vid].size() == 0 ||
                 adj_out[vid].size() + adj_in[vid].size() >
                 2 * average_degree ||
-                is_cores[bucket].get(vid))) {
+                is_cores[cur_p].get(vid))) { // 此时候选集跟核心集是一致的，只需要判断一个即可
             // 应该是一个链式寻找的过程
-            vid = (vid + ++count) % max + min;
+            index = (index + ++count) % num_p_v;
+            vid = indices[min + index];
         }
-        if (count == max)
+        if (count == num_p_v)
             return false;
-        // TODO 这个得从indices中取值
-        vid = indices[vid];
         return true;
     }
 
@@ -243,11 +324,11 @@ private:
         // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
         // TODO 以上这个计算不太现实
         // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
-        if (d.size() == 0) return false;
-        vid_t degree;
-        d.get_min(degree, vid);
-        d.remove(vid);
-        return true;
+//        if (d.size() == 0) return false;
+//        vid_t degree;
+//        d.get_min(degree, vid);
+//        d.remove(vid);
+//        return true;
     }
 
     void assign_remaining();
@@ -259,7 +340,7 @@ private:
     void sub_split(int i);
 
 public:
-    Model4Partitioner(std::string input, std::string algorithm, int num_partition);
+    Model4Partitioner(const std::string& input, const std::string& algorithm, int num_partition);
 
     void split() override;
 
@@ -304,6 +385,7 @@ public:
 
     // 广度遍历，重新索引，用于将顶点分块
     void re_index() {
+        queue<vid_t> v_queue;
         auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
         // 随机选择顶点，进行广度遍历，重新索引
         vid_t index = 0;

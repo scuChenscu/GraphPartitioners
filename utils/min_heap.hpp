@@ -19,7 +19,9 @@ private:
 // 构造方法，初始化成员变量n为0，heap为空，key2idx为空。
 public:
     MinHeap() : n(0), heap(), key2idx() {}
-
+    MinHeap(IdxType nelements) {
+        reserve(nelements);
+    }
     // 这是一个调整堆的过程
     IdxType shift_up(IdxType cur) {
         if (cur == 0) return 0;
@@ -96,8 +98,8 @@ public:
     bool get_min(ValueType &value, KeyType &key) {
         // 如果堆里面有元素，选择堆顶元素，因为堆顶元素引入的新顶点最少
         if (n > 0) {
-            value = heap[0].first; // 0就是堆顶元素，看插入的逻辑
-            key = heap[0].second;
+            value = heap[0].first; // 顶点的度数
+            key = heap[0].second; // 顶点的vid
             return true;
         } else
             // 堆为空时，返回false，随机选择顶点

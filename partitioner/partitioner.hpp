@@ -82,6 +82,11 @@ public:
         edge_ofstream << from << " " << to << " " << partition_id << endl;
     }
 
+    ~Partitioner() {
+//        vertex_ofstream.close();
+//        edge_ofstream.close();
+    }
+
     virtual void calculate_load_balance() {}
 
     virtual void calculate_edge_cut() {}
