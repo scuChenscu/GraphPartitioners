@@ -12,13 +12,12 @@
 #include <unordered_map>
 #include <set>
 #include <queue>
+#include <thread>
 #include "../../utils/dense_bitset.hpp"
-#include "../../partitioner/partitioner.hpp"
+#include "../../partitioner/edgePartitioner.hpp"
 #include "../../utils/graph.hpp"
 #include "../../utils/min_heap.hpp"
-#include "../../partitioner/partitioner.hpp"
 #include "../../utils/util.hpp"
-#include "../../partitioner/edgePartitioner.hpp"
 
 using namespace std;
 
@@ -62,8 +61,8 @@ private:
 
     vector<int8_t> master;
 
-    // is_cores和is_boundarys是每个分区独立的dense_bitset
-    vector<dense_bitset> is_cores, is_boundarys;
+    // is_cores和is_boundaries是每个分区独立的dense_bitset
+    vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
 
@@ -78,7 +77,7 @@ private:
 
     int check_edge(const edge_t *e) {
         rep (i, bucket) {
-            auto &is_boundary = is_boundarys[i];
+            auto &is_boundary = is_boundaries[i];
             if (is_boundary.get(e->first) && is_boundary.get(e->second) &&
                 occupied[i] < capacity) {
                 return i;
@@ -86,7 +85,7 @@ private:
         }
 
         rep (i, bucket) {
-            auto &is_core = is_cores[i], &is_boundary = is_boundarys[i];
+            auto &is_core = is_cores[i], &is_boundary = is_boundaries[i];
             if ((is_core.get(e->first) || is_core.get(e->second)) &&
                 occupied[i] < capacity) {
                 if (is_core.get(e->first) && degrees[e->second] > average_degree)
@@ -117,7 +116,7 @@ private:
     void add_boundary(vid_t vid) {
         // 获取到当前分区的核心集和边界集
         auto &is_core = is_cores[bucket];
-        auto &is_boundary = is_boundarys[bucket];
+        auto &is_boundary = is_boundaries[bucket];
 
         // 如果已经被加入到边界集，直接返回
         if (is_boundary.get(vid))
@@ -171,7 +170,7 @@ private:
     void sub_add_boundary(vid_t vid, int cur_p) {
         // 获取到当前分区的核心集和边界集
         auto &is_core = is_cores[cur_p];
-        auto &is_boundary = is_boundarys[cur_p];
+        auto &is_boundary = is_boundaries[cur_p];
         // 当从S\C引入顶点时，它的邻居顶点可能已经加入到边界集
         if (is_boundary.get(vid)) return;
         // 2. 如果顶点不在边界集，把顶点加入到边界集
@@ -251,7 +250,7 @@ private:
 
         // 1. 把顶点加入核心集和边界集，不需要考虑重复设置的场景
         is_cores[cur_p].set_bit_unsync(vid);
-        // is_boundarys[cur_p].set_bit_unsync(vid);
+        // is_boundaries[cur_p].set_bit_unsync(vid);
         // 顶点的来源有两种情况，一是从V，二是从S\C
         // 如果顶点的度为0，不需要处理
         if (d == 0) return;
@@ -318,18 +317,6 @@ private:
             return false;
         return true;
     }
-
-    bool get_target_vertex(vid_t &vid) {
-        // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
-        // TODO 以上这个计算不太现实
-        // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
-//        if (d.size() == 0) return false;
-//        vid_t degree;
-//        d.get_min(degree, vid);
-//        d.remove(vid);
-//        return true;
-    }
-
     void assign_remaining();
 
     void assign_master();
@@ -339,9 +326,10 @@ private:
     void sub_split(int i);
 
 public:
-    Model4Partitioner(const std::string& input, const std::string& algorithm, int num_partition);
+    Model4Partitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+                      size_t num_partitions);
 
-    void split() override;
+    void split();
 
     // 广度遍历，重新索引，用于将顶点分块
     void re_index() {

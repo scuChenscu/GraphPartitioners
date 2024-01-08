@@ -1,16 +1,10 @@
-//
-// Created by muzongshen on 2021/9/30.
-//
-
 #include "fennel.hpp"
-#include <algorithm>
-#include <cmath>
-#include <random>
+
 
 // FENNEL算法的主要思想：为了减少边切割，一个顶点应该被分配到有较多邻居的分区，同时还要加入一个惩罚因子，以防止一个分区变得过大
-FennelPartitioner::FennelPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle) {
-    p = num_partition;
-    config_output_files(input, algorithm, num_partition);
+FennelPartitioner::FennelPartitioner(const BaseGraph &baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
+        VertexPartitioner(baseGraph, algorithm, num_partitions) {
+    config_output_files();
     LOG(INFO) << "begin init class";
     // TODO 为什么在这里就开始计算耗时
     total_time.start();
@@ -27,7 +21,7 @@ FennelPartitioner::FennelPartitioner(string input, string algorithm, int num_par
     fin.read((char *) &num_vertices, sizeof(num_vertices));
     fin.read((char *) &num_edges, sizeof(num_edges));
     // 文件大小 除以 内存大小 得到 批次数
-    num_batches = (filesize / ((std::size_t) memsize * 1024 * 1024)) + 1;
+    num_batches = (filesize / ((std::size_t) memory_size * 1024 * 1024)) + 1;
     // 每个batch的边数
     // TODO batch的作用是什么？内存不够，每次只能读取这么多？
     num_edges_per_batch = (num_edges / num_batches) + 1;

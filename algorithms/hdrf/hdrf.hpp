@@ -8,11 +8,11 @@
 #include <bitset>
 #include "../../utils/dense_bitset.hpp"
 #include "../../utils/util.hpp"
-#include "../../partitioner/partitioner.hpp"
+#include "../../partitioner/edgePartitioner.hpp"
 
 using namespace std;
 
-class HdrfPartitioner : public Partitioner {
+class HdrfPartitioner : public EdgePartitioner {
 private:
     ifstream fin;
     vid_t num_vertices{};
@@ -22,7 +22,6 @@ private:
     // batch processing globals
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
-    int p;
     double lambda;
 
     vector<vid_t> degrees;
@@ -52,11 +51,12 @@ protected:
     void read_and_do(const string& opt_name);
 
 public:
-    HdrfPartitioner(const string& file_name, const string& algorithm, int p, int memsize, double balance_ratio,
-                    double balance_lambda, bool shuffle);
-
-    void split() override;
-
-    virtual void calculate_replication_factor();
+    HdrfPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+                    size_t num_partitions,
+                    int memory_size,
+                    double balance_ratio,
+                    double balance_lambda,
+                    bool shuffle);
+    void split();
 };
 

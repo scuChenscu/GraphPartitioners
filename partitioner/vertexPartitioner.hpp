@@ -5,18 +5,19 @@
 #include <iostream>
 #include <fstream>
 #include "partitioner.hpp"
+#include "../baseGraph/base_graph.hpp"
 #include "../utils/util.hpp"
 
-using namespace std;
 
-/**
- * 以边为基本划分单位的图分区算法
- */
 class VertexPartitioner : public Partitioner {
+public:
+    explicit VertexPartitioner(const BaseGraph &baseGraph,const string& algorithm, size_t num_partitions);
 protected:
-    // 边割率
+    // 边割数
     size_t edge_cut;
+    // 边割率
     double edge_cut_rate;
     // 负载均衡
     double load_balance;
+
 };

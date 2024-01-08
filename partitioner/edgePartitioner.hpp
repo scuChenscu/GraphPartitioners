@@ -5,15 +5,14 @@
 #include <iostream>
 #include <fstream>
 #include "partitioner.hpp"
+#include "../baseGraph/base_graph.hpp"
+#include "../utils/dense_bitset.hpp"
 #include "../utils/util.hpp"
 
-using namespace std;
-
-/**
- * 以边为基本划分单位的图分区算法
- */
 class EdgePartitioner : public Partitioner {
-
+public:
+     EdgePartitioner(const BaseGraph& baseGraph, const string& algorithm, size_t num_partitions);
+     ~EdgePartitioner();
 protected:
     // 复制因子
     double replication_factor;
@@ -21,8 +20,6 @@ protected:
     double alpha;
     // 顶点总副本数
     size_t replicas;
-    // 分区数
-    size_t partition;
 
     size_t max_edge = numeric_limits<size_t>::min();
 
@@ -30,6 +27,13 @@ protected:
 
     // 分区边负载上限调节因子
     double balance_ratio;
+
+
+    // 已经分配的边数
+    size_t assigned_edges;
+    // 每个分区顶点的数目
+    vector<size_t> num_vertices_each_partition;
+
 
     // TODO 邻接表，每个顶点的邻居顶点；该数据应该来自Graph
     unordered_map<vid_t, set<vid_t>> adjacency_list;
@@ -39,18 +43,12 @@ protected:
     vector<dense_bitset> is_mirrors;
 
     // 计算副本
-    void calculate_replication_factor()  {
-        for(auto &is_mirror : is_mirrors) {
-            replicas += is_mirror.popcount();
-        }
-        replication_factor = (double) replicas / (double)graph.num_vertices;
-    }
+    void calculate_replication_factor();
 
     // 计算负载均衡因子
-    void calculate_alpha()  {
-        max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
-        min_edge = *min_element(occupied.begin(), occupied.end());
+    void calculate_alpha();
 
-        alpha = (double) max_edge * (double)partition / (double) graph.num_edges;
-    }
+    void calculate_indices() override;
+
+    void print_indices() override;
 };

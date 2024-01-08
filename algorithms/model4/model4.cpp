@@ -1,11 +1,9 @@
 #include "model4.hpp"
-#include <thread>
 //固定随机数
 // 构造函数
-Model4Partitioner::Model4Partitioner(const std::string& input, const std::string& algorithm, int num_partition)
-        : input(input), gen(985) {
-    p = num_partition;
-    config_output_files(input, algorithm, num_partition);
+Model4Partitioner::Model4Partitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+                                     size_t num_partitions) : EdgePartitioner(baseGraph, algorithm, num_partitions), input(input), gen(985) {
+    config_output_files();
 
     total_time.start();
     std::ifstream fin(binary_edgelist_name(input),
@@ -34,7 +32,7 @@ Model4Partitioner::Model4Partitioner(const std::string& input, const std::string
     visited = dense_bitset(num_vertices);
     indices.resize(num_vertices);
     is_cores.assign(p, dense_bitset(num_vertices));
-    is_boundarys.assign(p, dense_bitset(num_vertices));
+    is_boundaries.assign(p, dense_bitset(num_vertices));
     true_vids.resize(num_vertices);
     is_mirrors.assign(num_vertices, dense_bitset(p));
     master.assign(num_vertices, -1);
@@ -62,7 +60,7 @@ Model4Partitioner::Model4Partitioner(const std::string& input, const std::string
 
 //最后一个子图就是剩下边组合而成
 void Model4Partitioner::assign_remaining() {
-    auto &is_boundary = is_boundarys[p - 1], &is_core = is_cores[p - 1];
+    auto &is_boundary = is_boundaries[p - 1], &is_core = is_cores[p - 1];
     repv(u, num_vertices) for (auto &i: adj_out[u])
             if (edges[i.v].valid()) {
                 assign_edge(p - 1, u, edges[i.v].second);
@@ -87,7 +85,7 @@ void Model4Partitioner::assign_master() {
     long long sum = p * num_vertices;
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
     std::vector<dense_bitset::iterator> pos(p);
-    rep(b, p) pos[b] = is_boundarys[b].begin();
+    rep(b, p) pos[b] = is_boundaries[b].begin();
     vid_t count = 0;
     while (count < num_vertices) {
         long long r = distribution(gen) * sum;
@@ -99,9 +97,9 @@ void Model4Partitioner::assign_master() {
             r -= quota[k];
         }
         //选出当前位置还未被赋值的结点
-        while (pos[k] != is_boundarys[k].end() && master[*pos[k]] != -1)
+        while (pos[k] != is_boundaries[k].end() && master[*pos[k]] != -1)
             pos[k]++;
-        if (pos[k] != is_boundarys[k].end()) {
+        if (pos[k] != is_boundaries[k].end()) {
             count++;
             master[*pos[k]] = k;
             count_master[k]++;
@@ -113,7 +111,7 @@ void Model4Partitioner::assign_master() {
 
 size_t Model4Partitioner::count_mirrors() {
     size_t result = 0;
-    rep(i, p) result += is_boundarys[i].popcount();
+    rep(i, p) result += is_boundaries[i].popcount();
     return result;
 }
 
@@ -122,7 +120,6 @@ void Model4Partitioner::split() {
     LOG(INFO) << "construct_adj_list" << endl;
     // TODO，感觉这个不一定需要，因为adj_out和adj_in已经存储了所有边的信息
     // 这里的adj_list是直接根据邻接表拿到邻居顶点
-    construct_adj_list(edges);
     // 重新索引
     LOG(INFO) << "re_index" << endl;
     re_index();
@@ -177,7 +174,7 @@ void Model4Partitioner::split() {
 
     part_degrees.clear();
     is_cores.clear();
-    is_boundarys.clear();
+    is_boundaries.clear();
     is_mirrors.clear();
     true_vids.clear();
     min_heap.clear();
@@ -285,22 +282,15 @@ void Model4Partitioner::split() {
 
     calculate_replication_factor();
     calculate_alpha();
-    calculate_rho();
     result << "Cost Time: " << total_time.get_time()
            << " | Replication Factor: " << replication_factor
            << " | Alpha: " << alpha
            << " | Replicas: " << replicas
-           << " | Rho: " << rho
-           << " | Rho Exclude Last Partition: " << rho_1
            << " | Max Edge: " << max_edge
            << " | Min Edge: " << min_edge
            << " | Avg Edge: " << num_edges / p
            << " | Edges: " << num_edges
            << " | Vertices: " << num_vertices
-           //        << " | Max Vertex: " << max_vertex
-           //        << " | Min Vertex: " << min_vertex
-           << " | Avg Vertex: " << avg_vertex
-           << " | Avg Vertex Exclude Last Partition: " << avg_vertex_1
            // << " | Beta: " << beta
            << endl;
     appendToFile(result.str());
@@ -334,7 +324,7 @@ void Model4Partitioner::sub_split(const int p_i) {
     //TODO 因为每个分区独立使用min_heap,不需要清空最小堆
     min_heaps[p_i].clear();
     is_cores[p_i].clear();
-    is_boundarys[p_i].clear();
+    is_boundaries[p_i].clear();
     //TODO 为什么要全局扫描，移除已经分配的邻边
     rep(direction, 2) repv(vid, num_vertices) {
             // 获取所有顶点的邻接表

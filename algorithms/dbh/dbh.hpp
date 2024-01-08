@@ -1,9 +1,6 @@
-//
-// Created by muzongshen on 2021/9/23.
-//
-
 #pragma once
 
+#include <utility>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -13,33 +10,30 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
 #include "../../utils/dense_bitset.hpp"
+#include "../../utils/graph.hpp"
+#include "../../utils/min_heap.hpp"
+#include "../../partitioner/edgePartitioner.hpp"
 #include "../../utils/util.hpp"
-#include "../../partitioner/partitioner.hpp"
-
+#include "../../baseGraph/base_graph.hpp"
 
 using namespace std;
 
-class DbhPartitioner : public Partitioner {
+class DbhPartitioner : public EdgePartitioner {
 private:
-    vid_t num_vertices;
-    size_t num_edges;
     size_t filesize;
 
-    int p;
+    int memory_size;
+    vector<vid_t> degrees;
     ifstream fin;
-
-    std::vector<vid_t> degrees;
-
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
-
     dense_bitset true_vids;;
-    std::vector<dense_bitset> is_mirrors;
-    std::vector<size_t> counter;
+    vector<size_t> counter;
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
+
+
 
 protected:
     void read_and_do(string opt_name);
@@ -49,7 +43,8 @@ protected:
     void batch_node_assignment(vector<edge_t> &edges);
 
 public:
-    DbhPartitioner(const string& input, const string& algorithm, int num_partition, int memsize, bool shuffle);
+    DbhPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+                   size_t num_partitions, int memory_size);
 
     void split();
     virtual void calculate_replication_factor();

@@ -12,14 +12,12 @@ link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
-        partitioner/partitioner.hpp
-        baseGraph/base_graph.hpp
+        baseGraph/base_graph.cpp
+        partitioner/partitioner.cpp
+        partitioner/edgePartitioner.cpp
+        partitioner/vertexPartitioner.cpp
         utils/graph.cpp
         algorithms/ne/ne.cpp
-        algorithms/ours/ours.cpp
-        algorithms/model1/model1.cpp
-        algorithms/model2/model2.cpp
-        algorithms/model3/model3.cpp
         algorithms/model4/model4.cpp
         algorithms/dbh/dbh.cpp
         algorithms/hdrf/hdrf.cpp

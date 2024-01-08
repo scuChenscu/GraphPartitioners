@@ -1,27 +1,24 @@
 #include "hdrf.hpp"
-#include "../../utils/util.hpp"
 
 using namespace std;
 
 // HDRF是以边作为输入流的边分区算法，是为幂律分布图设计的图分区方法。其基本思路是优先对度数高的顶点进行切分，这样可以最小化镜像顶点的数量。
 // HDRF是把边划分到不同的分区，即存在复制vertex
-HdrfPartitioner::HdrfPartitioner(const string &filename,
-                                 const string &algorithm,
-                                 int num_partition,
+HdrfPartitioner::HdrfPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+                                 size_t num_partitions,
                                  int memory_size,
                                  double balance_ratio,
                                  double balance_lambda,
-                                 bool shuffle) {
+                                 bool shuffle) : EdgePartitioner(baseGraph, algorithm, num_partitions) {
 
-    config_output_files(filename, algorithm, p);
+    config_output_files();
 
-    p = num_partition;
     lambda = balance_lambda;
 
     if (shuffle) {
-        fin.open(shuffled_binary_edgelist_name(filename), ios::binary | ios::ate);
+        fin.open(shuffled_binary_edgelist_name(input), ios::binary | ios::ate);
     } else {
-        fin.open(binary_edgelist_name(filename), ios::binary | ios::ate);
+        fin.open(binary_edgelist_name(input), ios::binary | ios::ate);
     }
 
     filesize = fin.tellg();
@@ -32,19 +29,19 @@ HdrfPartitioner::HdrfPartitioner(const string &filename,
 
     CHECK_EQ(sizeof(vid_t) + sizeof(size_t) + num_edges * sizeof(edge_t), filesize);
 
-    max_partition_load = (uint64_t)balance_ratio * num_edges / p;
+    max_partition_load = (uint64_t)balance_ratio * num_edges / num_partitions;
     // vertex度数
     degrees.resize(num_vertices, 0);
     // batch数，根据内存来划分
     num_batches = (filesize / ((size_t) memory_size * 1024 * 1024)) + 1;
     num_edges_per_batch = (num_edges / num_batches) + 1;
     // 记录每个分区的边负载
-    edge_load.resize(p);
+    edge_load.resize(num_partitions);
     // 应该是记录每个vertex的分区，用位图来记录，类似 0 0 0 0 1 0
-    is_mirrors.assign(num_vertices, dense_bitset(p));
+    is_mirrors.assign(num_vertices, dense_bitset(num_partitions));
     true_vids.resize(num_vertices);
     // 分区度？不是很懂这个的作用
-    part_degrees.assign(num_vertices, vector<vid_t>(p));
+    part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
     balance_vertex_distribute.resize(num_vertices);
 }
 
@@ -75,7 +72,7 @@ int HdrfPartitioner::find_max_score_partition_hdrf(edge_t &e) {
     uint32_t max_p = 0;
     double bal, gv, gu;
 
-    for (int j = 0; j < p; j++) {
+    for (int j = 0; j < num_partitions; j++) {
         // 如果分区已经超过了最大分区负载，直接跳过
         if (edge_load[j] >= max_partition_load) {
             continue;
@@ -174,9 +171,9 @@ void HdrfPartitioner::split() {
 
     //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
     size_t total_mirrors = 0;
-    vector<vid_t> buckets(p);
+    vector<vid_t> buckets(num_partitions);
     // 每个分区的容量
-    double capacity = (double) true_vids.popcount() * 1.05 / p + 1;
+    double capacity = (double) true_vids.popcount() * 1.05 / num_partitions + 1;
     // 遍历vertex
     rep(i, num_vertices) {
         total_mirrors += is_mirrors[i].popcount(); // 这个是不是说明被复制了？
@@ -187,7 +184,7 @@ void HdrfPartitioner::split() {
             unique = true;
         }
         // 遍历分区
-        repv(j, p) {
+        repv(j, num_partitions) {
             // 如果vertex i的j个分区为1
             if (is_mirrors[i].get(j)) {
 //                double score=((i%p==j)?1:0)+(part_degrees[i][j]/(degrees[i]+1))+(buckets[j]< capacity?1:0);
@@ -207,7 +204,7 @@ void HdrfPartitioner::split() {
         balance_vertex_distribute[i] = which_p;
     }
     vertex_ofstream.close();
-    repv(j, p) {
+    repv(j, num_partitions) {
         LOG(INFO) << "each partition node count: " << buckets[j];
     }
 
@@ -229,17 +226,4 @@ void HdrfPartitioner::split() {
            << " | Min Load: " << min_load
            << endl;
     appendToFile(result.str());
-
-
-}
-
-void HdrfPartitioner::calculate_replication_factor() {
-    // 每个边集的顶点数求和除以总的顶点数
-    int replicas = 0;
-    for (auto & is_mirror : is_mirrors) repv(j, p) {
-            if (is_mirror.get(j)) {
-                replicas++;
-            }
-        }
-    replication_factor = (double) replicas / num_vertices;
 }

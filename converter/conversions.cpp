@@ -65,7 +65,7 @@ void convert(const std::string& filename, Converter *converter, int memory_size 
         LOG(FATAL) << "Empty filename";
     }
     if (converter->done()) {
-        LOG(INFO) << "Skip convert, .binedgelist file exists";
+        LOG(INFO) << "Skip convert, " << filename <<".binedgelist file exists";
         return;
     }
     converter->init(memory_size);

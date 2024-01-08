@@ -1,10 +1,7 @@
-//
-// Created by muzongshen on 2021/9/30.
-//
-
-#ifndef GRAPHPARTITIONING_LDG_HPP
-#define GRAPHPARTITIONING_LDG_HPP
-
+#pragma once
+#include <algorithm>
+#include <cmath>
+#include <random>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -15,11 +12,11 @@
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/dense_bitset.hpp"
 #include "../../utils/util.hpp"
-#include "../../partitioner/partitioner.hpp"
+#include "../../partitioner/vertexPartitioner.hpp"
 
 using namespace std;
 
-class LdgPartitioner : public Partitioner {
+class LdgPartitioner : public VertexPartitioner {
 private:
     vid_t num_vertices;
     size_t num_edges;
@@ -48,12 +45,9 @@ protected:
     int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
 
 public:
-    LdgPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle);
+    LdgPartitioner(const BaseGraph &baseGraph, const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle);
 
     void split();
 
     void calculate_edge_cut();
 };
-
-
-#endif

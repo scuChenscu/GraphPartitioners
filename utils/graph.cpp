@@ -3,8 +3,10 @@
 
 // build方法，传入边集合
 void graph_t::build(const std::vector<edge_t> &edges) {
+    LOG(INFO) << "building graph" << endl;
     // 构造过程
     //可能存在孤立节点，在有边的时候才创建
+    LOG(INFO) << nedges << endl;
     if (edges.size() > nedges) {
         // 重新分配空间，neighbors存储所有边的数据，通过vdata[vid]来获取到对应vid的邻边
         neighbors = (uint40_t *) realloc(neighbors, sizeof(uint40_t) * edges.size());
@@ -12,7 +14,7 @@ void graph_t::build(const std::vector<edge_t> &edges) {
     CHECK(neighbors) << "allocation failed";
     nedges = edges.size();
     // 初始化操作
-    std::vector<size_t> count(num_vertices, 0);
+    vector<size_t> count(num_vertices, 0);
     // count计算每个顶点有多少个邻居
     for (size_t i = 0; i < nedges; i++) {
         count[edges[i].first]++;
@@ -41,6 +43,7 @@ void graph_t::build(const std::vector<edge_t> &edges) {
 }
 
 void graph_t::build_reverse(const std::vector<edge_t> &edges) {
+    LOG(INFO) << "building reverse graph " << endl;
     if (edges.size() > nedges)
         neighbors = (uint40_t *) realloc(neighbors, sizeof(uint40_t) * edges.size());
     CHECK(neighbors) << "allocation failed";

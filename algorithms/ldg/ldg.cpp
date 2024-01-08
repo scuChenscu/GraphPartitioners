@@ -1,11 +1,4 @@
-//
-// Created by muzongshen on 2021/9/30.
-//
-
 #include "ldg.hpp"
-#include <algorithm>
-#include <cmath>
-#include <random>
 // LDG是把点分到不同的分区，需要计算边割率
 // LDG计算：遍历所有的边，判断边的两个顶点是否在同一个分区
 // Linear Deterministic Greedy(LDG)
@@ -13,9 +6,9 @@
 // 它希望能把顶点分配到邻居最多的分区，以减小跨分区边的数量。
 // LDG需要保存之前的顶点信息，因此不适用于无边界流。
 // LDG和Fennel算法的区别在于partition_score的计算方式不太一样
-LdgPartitioner::LdgPartitioner(string input, string algorithm, int num_partition, int memsize, bool shuffle) {
-    p = num_partition;
-    config_output_files(input, algorithm, num_partition);
+LdgPartitioner::LdgPartitioner(const BaseGraph &baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
+        VertexPartitioner(baseGraph, algorithm, num_partitions){
+    config_output_files();
 
     total_time.start();
     //edge file
@@ -30,7 +23,7 @@ LdgPartitioner::LdgPartitioner(string input, string algorithm, int num_partition
     fin.read((char *) &num_vertices, sizeof(num_vertices));
     fin.read((char *) &num_edges, sizeof(num_edges));
 
-    num_batches = (filesize / ((std::size_t) memsize * 1024 * 1024)) + 1;
+    num_batches = (filesize / ((std::size_t) memory_size * 1024 * 1024)) + 1;
     num_edges_per_batch = (num_edges / num_batches) + 1;
 
     subg_vids.assign(p, unordered_set < vid_t > {});
