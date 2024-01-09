@@ -38,13 +38,14 @@ int main() {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
             string graph_name = entry.path().string();
-            if (!graph_name.ends_with(".graph")) continue;
+            if (!graph_name.ends_with(graph_suffix)) continue;
             LOG(INFO) << "Convert " << graph_name << " to binary edgelist" << endl;
             converter = new Converter(graph_name);
             convert(graph_name, converter, memory_size);
             delete converter;
             auto *baseGraph = new BaseGraph(graph_name);
             baseGraph->partition();
+            LOG(INFO) << "Finish partition on " << graph_name << endl;
             delete baseGraph;
         }
     }

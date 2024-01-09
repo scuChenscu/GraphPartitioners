@@ -63,8 +63,10 @@ public:
 
     // 析构函数
     ~graph_t() {
-        if (neighbors)
+        if (neighbors) {
+            // LOG(INFO) << neighbors << endl;
             free(neighbors);
+        }
     }
 
     void resize(vid_t _num_vertices) {

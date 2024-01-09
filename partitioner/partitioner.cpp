@@ -2,17 +2,27 @@
 
 #include "partitioner.hpp"
 
-Partitioner::Partitioner(const BaseGraph &baseGraph, const std::string &algorithm, const size_t num_partitions): graph(baseGraph), num_partitions(num_partitions), algorithm(algorithm){
+Partitioner::Partitioner(BaseGraph& baseGraph, const string& algorithm, const size_t num_partitions): graph(baseGraph), num_partitions(num_partitions), algorithm(algorithm){
     this->graph = baseGraph;
-    this->graph_name = baseGraph.graph_name;
+    // 浅拷贝
+    // BaseGraph g = baseGraph;
+    // BaseGraph *b = baseGraph;
+    // TODO 改成引用传递
+    // const BaseGraph& g2 = baseGraph;
+
+    // baseGraph.adjacency_list = nullptr;
+
+    this->graph_name = graph.graph_name;
     this-> num_partitions = num_partitions;
-    this->edges = baseGraph.edges;
-    this->vertices = baseGraph.vertices;
-    this->num_vertices = baseGraph.num_vertices;
-    this->num_edges = baseGraph.num_edges;
+    this->edges = graph.edges;
+    this->vertices = graph.vertices;
+    this->num_vertices = graph.num_vertices;
+    this->num_edges = graph.num_edges;
     this->algorithm = algorithm;
-    this->adj_out = baseGraph.adj_out;
-    this->adj_in = baseGraph.adj_in;
+
+    this->adj_out = graph.adj_out;
+
+    this->adj_in = graph.adj_in;
 }
 //
 //Partitioner::~Partitioner() {
@@ -35,4 +45,8 @@ void Partitioner::save_vertex(vid_t vertex_id, int partition_id) {
 // 输出边分区结果：from to partition_id
 void Partitioner::save_edge(vid_t from, vid_t to, int partition_id) {
     edge_ofstream << from << " " << to << " " << partition_id << endl;
+}
+
+Partitioner::~Partitioner() {
+    LOG(INFO) << "Partitioner::~Partitioner()" << endl;
 }

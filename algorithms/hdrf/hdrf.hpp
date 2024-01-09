@@ -51,7 +51,7 @@ protected:
     void read_and_do(const string& opt_name);
 
 public:
-    HdrfPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+    HdrfPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                     size_t num_partitions,
                     int memory_size,
                     double balance_ratio,

@@ -21,7 +21,7 @@ protected:
     ofstream edge_ofstream;
     ofstream vertex_ofstream;
     // 需要执行分区算法的图
-    BaseGraph graph;
+    BaseGraph& graph;
     size_t num_partitions;
     vector<edge_t> edges;
     vector<vid_t> vertices;
@@ -35,7 +35,7 @@ protected:
     string graph_name;
 
 public:
-    explicit Partitioner(const BaseGraph &baseGraph, const string& algorithm, size_t num_partitions);
+    explicit Partitioner(BaseGraph &baseGraph, const string& algorithm, size_t num_partitions);
 
     virtual void split() {
         LOG(ERROR) << "Derived class has not override split function" << endl;
@@ -58,7 +58,7 @@ public:
     // 输出边分区结果：from to partition_id
     void save_edge(vid_t from, vid_t to, int partition_id);
 
-    // ~Partitioner() = default;
+    ~Partitioner();
 };
 
 

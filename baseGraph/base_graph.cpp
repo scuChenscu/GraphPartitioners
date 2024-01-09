@@ -117,8 +117,9 @@ void BaseGraph::partition() {
             partitioner->calculate_indices();
             // LOG(INFO) << "Try to delete " << algorithm << " partitioner" << endl;
             // TODO 这里显式调用partitioner会报错
+            // LOG(INFO) << partitioner << endl;
+            // LOG(INFO) << this << endl;
             // delete partitioner;
-            // 日志打印是异步
             // LOG(INFO) << "Delete " << algorithm << " partitioner successfully" << endl;
         }
     }

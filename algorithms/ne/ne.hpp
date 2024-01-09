@@ -26,6 +26,7 @@ private:
     const double BALANCE_RATIO = 1.00;
 
     unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
+    // TODO 用dense_bitset
     set<vid_t> v_set; // 重新索引时已经被处理的顶点
     
     queue<vid_t> v_queue;
@@ -76,7 +77,7 @@ private:
     size_t count_mirrors();
 
 public:
-    NePartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+    NePartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                   size_t num_partitions);
     void split() override;
     // 广度遍历，重新索引，用于将顶点分块

@@ -2,7 +2,7 @@
 
 
 // FENNEL算法的主要思想：为了减少边切割，一个顶点应该被分配到有较多邻居的分区，同时还要加入一个惩罚因子，以防止一个分区变得过大
-FennelPartitioner::FennelPartitioner(const BaseGraph &baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
+FennelPartitioner::FennelPartitioner(BaseGraph& baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
         VertexPartitioner(baseGraph, algorithm, num_partitions) {
     config_output_files();
     LOG(INFO) << "begin init class";

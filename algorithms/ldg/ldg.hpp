@@ -45,7 +45,7 @@ protected:
     int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
 
 public:
-    LdgPartitioner(const BaseGraph &baseGraph, const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle);
+    LdgPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle);
 
     void split();
 

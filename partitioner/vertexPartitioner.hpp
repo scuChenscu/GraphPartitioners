@@ -11,7 +11,7 @@
 
 class VertexPartitioner : public Partitioner {
 public:
-    explicit VertexPartitioner(const BaseGraph &baseGraph,const string& algorithm, size_t num_partitions);
+    explicit VertexPartitioner(BaseGraph &baseGraph,const string& algorithm, size_t num_partitions);
 protected:
     // 边割数
     size_t edge_cut;

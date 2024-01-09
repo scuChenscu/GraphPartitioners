@@ -2,7 +2,7 @@
 
 #include "edgePartitioner.hpp"
 
-EdgePartitioner::EdgePartitioner(const BaseGraph &baseGraph, const std::string &algorithm,
+EdgePartitioner::EdgePartitioner(BaseGraph &baseGraph, const std::string &algorithm,
                                  const size_t num_partitions) : Partitioner(baseGraph, algorithm, num_partitions) {
     this->adjacency_list = baseGraph.adjacency_list;
     this->occupied.assign(num_partitions, 0);

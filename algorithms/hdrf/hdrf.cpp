@@ -4,7 +4,7 @@ using namespace std;
 
 // HDRF是以边作为输入流的边分区算法，是为幂律分布图设计的图分区方法。其基本思路是优先对度数高的顶点进行切分，这样可以最小化镜像顶点的数量。
 // HDRF是把边划分到不同的分区，即存在复制vertex
-HdrfPartitioner::HdrfPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+HdrfPartitioner::HdrfPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                                  size_t num_partitions,
                                  int memory_size,
                                  double balance_ratio,

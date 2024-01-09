@@ -6,7 +6,7 @@
 // 它希望能把顶点分配到邻居最多的分区，以减小跨分区边的数量。
 // LDG需要保存之前的顶点信息，因此不适用于无边界流。
 // LDG和Fennel算法的区别在于partition_score的计算方式不太一样
-LdgPartitioner::LdgPartitioner(const BaseGraph &baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
+LdgPartitioner::LdgPartitioner(BaseGraph& baseGraph,const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle) :
         VertexPartitioner(baseGraph, algorithm, num_partitions){
     config_output_files();
 

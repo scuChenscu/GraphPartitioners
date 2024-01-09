@@ -2,7 +2,7 @@
 #include "dbh.hpp"
 // Degree Based Hashing (DBH)[6]分割通过判断结点的度信息来切分结点分配边。对于幂律图来说低度结点的局部性很容易保持，高度结点因为关联太多结点如果将边全部分配在一个子图上不太可能，因此该算法尽最大可能保持低度结点的局部性。
 // DBH也是把边划分到不同的分区，计算负载因子
-DbhPartitioner::DbhPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+DbhPartitioner::DbhPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                                size_t num_partitions, int memory_size) : EdgePartitioner(baseGraph, algorithm, num_partitions){
     config_output_files();
     ifstream fin(binary_edgelist_name(input),

@@ -11,7 +11,7 @@
 
 class EdgePartitioner : public Partitioner {
 public:
-     EdgePartitioner(const BaseGraph& baseGraph, const string& algorithm, size_t num_partitions);
+     EdgePartitioner(BaseGraph& baseGraph, const string& algorithm, size_t num_partitions);
      ~EdgePartitioner();
 protected:
     // 复制因子

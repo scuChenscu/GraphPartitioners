@@ -43,7 +43,7 @@ protected:
     void batch_node_assignment(vector<edge_t> &edges);
 
 public:
-    DbhPartitioner(const BaseGraph& baseGraph, const string& input, const string& algorithm,
+    DbhPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                    size_t num_partitions, int memory_size);
 
     void split();
