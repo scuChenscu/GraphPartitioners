@@ -28,6 +28,8 @@ private:
     const double CAPACITY_RATIO = 0.50;
 
     vector<vid_t> indices; // new_vid, old_vid
+    // TODO 记录每个原始顶点在indices的下表
+    vector<size_t> reverse_indices;
 
     string input;
     
@@ -61,7 +63,6 @@ private:
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
-
     dense_bitset visited;
 
     //随机数生成器

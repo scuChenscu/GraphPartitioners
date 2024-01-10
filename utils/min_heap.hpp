@@ -74,7 +74,7 @@ public:
         if (d == 0) return;
         IdxType cur = key2idx[key];
         CHECK(cur < n && heap[cur].second == key) << "key not found";
-
+        // TODO 为什么会出现heap[cur].first为0的情况
         CHECK_GE(heap[cur].first, d) << "value cannot be negative";
         heap[cur].first -= d;
         shift_up(cur);

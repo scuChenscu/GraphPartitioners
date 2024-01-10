@@ -129,6 +129,7 @@ void NePartitioner::split() {
         min_heap.clear();
 
         //TODO 为什么要全局扫描，移除已经分配的邻边
+        // TODO 为什么要检查一遍
         rep(direction, 2) repv(vid, num_vertices) {
                 adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
                 for (size_t i = 0; i < neighbors.size();) {

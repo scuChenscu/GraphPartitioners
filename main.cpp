@@ -16,7 +16,24 @@ using namespace std;
 namespace fs = filesystem;
 // 原始图数据的路径
 const static string input = "../graphs/input";
+
+void signalHandler(int signum) {
+    std::cerr << "Segmentation Fault (signal " << signum << ")" << std::endl;
+
+    // 打印调用栈信息（需要编译时开启调试信息）
+    // 注意: 打印调用栈信息可能需要开启编译器选项，如 "-g"。
+    // 如果使用 g++，可以使用 "-g" 选项编译代码。
+    std::cerr << "Call stack:\n";
+    system("backtrace");
+
+    // 退出程序
+    exit(signum);
+}
+
 int main() {
+
+    signal(SIGABRT, signalHandler);
+    signal(SIGSEGV, signalHandler);
     google::InitGoogleLogging("main");  //参数为自己的可执行文件名
     FLAGS_logtostderr = true;
 
@@ -52,3 +69,4 @@ int main() {
     google::ShutdownGoogleLogging();
     return 0;
 }
+

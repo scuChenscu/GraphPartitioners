@@ -41,6 +41,7 @@ protected:
     vector<size_t> occupied;
     // 每个顶点所属的分区，每个顶点可能属于多个分区
     vector<dense_bitset> is_mirrors;
+    // TODO 需要一个结构来记录每个边所属的分区
 
     // 计算副本
     void calculate_replication_factor();
