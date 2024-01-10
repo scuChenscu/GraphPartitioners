@@ -46,6 +46,8 @@ private:
     // 图结构
     graph_t adj_out;
     graph_t adj_in;
+
+    graph_t adj_directed;
     MinHeap<vid_t, vid_t> min_heap;
     // 为每个分区维护一个min_heap
     vector<MinHeap<vid_t, vid_t> > min_heaps;

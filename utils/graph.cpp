@@ -59,5 +59,55 @@ void graph_t::build_reverse(const std::vector<edge_t> &edges) {
         vdata[v] = adjlist_t(neighbors + count[v - 1]);
     }
     for (size_t i = 0; i < edges.size(); i++)
-        vdata[edges[i].second].push_back(i);
+        vdata[edges[i].second].push_back(i); // 这里的i是边的编号
+}
+
+void graph_t::build_directed(const std::vector<edge_t> &edges, const std::vector<size_t> &reverse_indices) {
+    LOG(INFO) << "building directed graph " << endl;
+    if (edges.size() > nedges)
+        neighbors = (uint40_t *) realloc(neighbors, sizeof(uint40_t) * edges.size());
+    CHECK(neighbors) << "allocation failed";
+    nedges = edges.size();
+
+    std::vector<size_t> count(num_vertices, 0);
+    for (size_t i = 0; i < nedges; i++) {
+        vid_t first = edges[i].first;
+        vid_t second = edges[i].second;
+        // 如果属于同一个core，则以vid为准
+        if (reverse_indices[first] < reverse_indices[second]) {
+            count[first]++;
+        } else if (reverse_indices[first] > reverse_indices[second]) {
+            count[second]++;
+        } else {
+            if(first < second) {
+                count[first]++;
+            } else {
+                count[second]++;
+            }
+        }
+
+    }
+
+    vdata[0] = adjlist_t(neighbors);
+    for (vid_t v = 1; v < num_vertices; v++) {
+        count[v] += count[v - 1];
+        vdata[v] = adjlist_t(neighbors + count[v - 1]);
+    }
+    for (size_t i = 0; i < edges.size(); i++) {
+        vid_t first = edges[i].first;
+        vid_t second = edges[i].second;
+        // 如果属于同一个core，则以vid为准
+        if (reverse_indices[first] < reverse_indices[second]) {
+            vdata[edges[i].first].push_back(i);
+        } else if (reverse_indices[first] > reverse_indices[second]) {
+            vdata[edges[i].second].push_back(i);
+        } else {
+            if(first < second) {
+                vdata[edges[i].first].push_back(i);
+            } else {
+                vdata[edges[i].second].push_back(i);
+            }
+        }
+    }
+
 }

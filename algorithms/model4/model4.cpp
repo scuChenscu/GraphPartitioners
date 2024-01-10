@@ -32,6 +32,7 @@ Model4Partitioner::Model4Partitioner(BaseGraph& baseGraph, const string& input, 
     avg_vertices_each_partition = num_vertices / num_partitions;
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
+    adj_directed.resize(num_vertices);
     visited = dense_bitset(num_vertices);
     indices.resize(num_vertices);
     reverse_indices.resize(num_vertices);
@@ -128,6 +129,9 @@ void Model4Partitioner::split() {
     // 重新索引
     LOG(INFO) << "re_index" << endl;
     re_index();
+    // 根据边的两端顶点所属的cores建立有向边
+    LOG(INFO) << "Build direction edge" << endl;
+    adj_directed.build_directed(edges, reverse_indices);
     // 每个分区的理论顶点数
     // 0, num_vertices/p, 2*num_vertices/p, 3*num_vertices/p,...
     // p个分区，每个分区的顶点范围是[num_partitions * i, p * (i + 1) - 1]
@@ -171,6 +175,7 @@ void Model4Partitioner::split() {
     // LOG(INFO) << "Start sub_split" << endl;
     // sub_split(0);
     LOG(INFO) << "Model4 multi-partitioning finished!" << endl;
+    CHECK_EQ(assigned_edges, num_edges);
     return;
     // TODO 资源清理
 //    min_heaps.clear();
@@ -235,7 +240,7 @@ void Model4Partitioner::split() {
     // 把剩余的边放入最后一个分区
     assign_remaining();
 
-    // CHECK_EQ(assigned_edges, num_edges);
+    CHECK_EQ(assigned_edges, num_edges);
 
     //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
     vector<vid_t> current_partitions(num_partitions);
@@ -309,7 +314,9 @@ void Model4Partitioner::sub_split(size_t index) {
                 break;
             }
             // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
-            degree = adj_out[vid].size() + adj_in[vid].size();
+            // TODO 从core中获取，不会有问题
+            // degree = adj_out[vid].size() + adj_in[vid].size();
+            degree = adj_directed[vid].size();
         } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
             min_heaps[index].remove(vid);
         }
@@ -398,8 +405,8 @@ bool Model4Partitioner::sub_get_free_vertex(vid_t &vid, vid_t index)  {
     //TODO 什么叫已经超出平衡范围
     //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
     while (count < num_vertices_each_cores &&
-           (adj_out[vid].size() + adj_in[vid].size() == 0 ||
-            adj_out[vid].size() + adj_in[vid].size() >
+           (adj_directed[vid].size() == 0 ||
+            adj_directed[vid].size()  >
             2 * average_degree ||
             is_cores[index].get(vid))) { // 此时候选集跟核心集是一致的，只需要判断一个即可
         // 应该是一个链式寻找的过程
@@ -452,21 +459,32 @@ void Model4Partitioner::sub_occupy_vertex(vid_t vid, vid_t d, size_t index)  {
     // 2. 遍历vid的邻居顶点，把不属于边界集的顶点加入到边界集
     // TODO 把顶点的邻居加入到边界集，加入条件为：顶点所属的core在当前core之上
     // TODO 重复选取顶点不会有影响
-    for (auto &i: adj_out[vid]) {
-        // TODO CAS太费操作了，改成谁小归谁
-        if (edges[i.v].valid()) {
-            vid_t neighbor = edges[i.v].second;
-            // TODO 这里不对indices是一个数组，并没有包含顶点所属的分区信息，需要额外一个数组
-            size_t reverse_index = reverse_indices[neighbor];
-            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
-            if (neighbor_partition >= current_partition) {
-                sub_add_boundary(neighbor, index);
-            }
-        }
-    }
+//    for (auto &i: adj_out[vid]) {
+//        // TODO CAS太费操作了，改成谁小归谁
+//        if (edges[i.v].valid()) {
+//            vid_t neighbor = edges[i.v].second;
+//            // TODO 这里不对indices是一个数组，并没有包含顶点所属的分区信息，需要额外一个数组
+//            size_t reverse_index = reverse_indices[neighbor];
+//            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
+//            if (neighbor_partition >= current_partition) {
+//                sub_add_boundary(neighbor, index);
+//            }
+//        }
+//    }
+//
+//
+//    for (auto &i: adj_in[vid]) {
+//        if (edges[i.v].valid()) {
+//            vid_t neighbor = edges[i.v].first;
+//            size_t reverse_index = reverse_indices[neighbor];
+//            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
+//            if (neighbor_partition >= current_partition) {
+//                sub_add_boundary(neighbor, index);
+//            }
+//        }
+//    }
 
-
-    for (auto &i: adj_in[vid]) {
+    for (auto &i: adj_directed[vid]) {
         if (edges[i.v].valid()) {
             vid_t neighbor = edges[i.v].first;
             size_t reverse_index = reverse_indices[neighbor];
@@ -476,8 +494,11 @@ void Model4Partitioner::sub_occupy_vertex(vid_t vid, vid_t d, size_t index)  {
             }
         }
     }
+
+
     // LOG(INFO) << "occupy vertex from core " << indices[vid] << " to core " << index << " finished" << endl;
     // TODO 这里清空，因为每个顶点只属于一个core，但是在后续的二次分配时，要重新使用，有点麻烦
+    // TODO 跑完之后不能删除，会影响别的线程
     // adj_out[vid].clear();
     // adj_in[vid].clear();
 }
@@ -519,7 +540,9 @@ void Model4Partitioner::sub_add_boundary(vid_t vid, size_t index) {
     is_boundary.set_bit_unsync(vid);
     // 当我们引入新的顶点到边界集的时候，需要把它的度信息加入到最小堆
     if (!is_core.get(vid)) {
-        vid_t degree = adj_out[vid].size() + adj_in[vid].size();
+        // TODO 这里有线程安全问题
+        // vid_t degree = adj_out[vid].size() + adj_in[vid].size();
+        vid_t degree = adj_directed[vid].size();
         CHECK_GE(degree, 0) << "Degree is 0";
         min_heaps[index].insert(degree, vid);
     }
@@ -532,10 +555,9 @@ void Model4Partitioner::sub_add_boundary(vid_t vid, size_t index) {
         // 遍历顶点的邻边
         for (size_t i = 0; i < neighbors.size();) {
             // TODO 1.边有效，2.对端顶点符合：1.在边界集，2.在核心集
-
             // TODO 会出现多个线程操作同一个顶点的adj；需要保证线程安全！！！
-            if (edges[neighbors[i].v].valid()) {
-                vid_t &u = direction ? edges[neighbors[i].v].second : edges[neighbors[i].v].first;
+            if (edges[neighbors[i].v].valid()) { // 边不会有线程安全的问题，因为根据设定只有一个顶点具备操作这条边的权限
+                vid_t& u = direction ? edges[neighbors[i].v].second : edges[neighbors[i].v].first;
                 // TODO 这里需要判断对端顶点所在的core，如果不在同一个core，应该如何处理
                 size_t reverse_index = reverse_indices[u];
                 size_t neighbor_partition = reverse_index / num_vertices_each_cores;
@@ -547,12 +569,15 @@ void Model4Partitioner::sub_add_boundary(vid_t vid, size_t index) {
                 if (is_core.get(u) && occupied[index] < capacity * CAPACITY_RATIO) { // 如果顶点在核心集中
                     assign_edge(index, direction ? vid : u,
                                 direction ? u : vid);
-                    min_heaps[index].decrease_key(vid); // 默认移除一条边
+                    // TODO 移除一条边
+                    min_heaps[index].decrease_key(vid);
+                    // TODO 这里没有线程安全的问题，因为remove只是一个set操作
                     edges[neighbors[i].v].remove();
                     //TODO 交换到最后位置，然后长度减1
-                    // TODO 该操作不会有线程安全问题，属于core内的对顶点的操作
-                    std::swap(neighbors[i], neighbors.back());
-                    neighbors.pop_back();
+                    // TODO 该操作会有线程安全问题，可能多个线程操作同一个顶点的neighbors
+                    // TODO 能否把以下操作改为原地操作
+//                    std::swap(neighbors[i], neighbors.back());
+//                    neighbors.pop_back();
                 } else if (is_boundary.get(u) &&
                            occupied[index] < capacity * CAPACITY_RATIO) { // 如果顶点在边界集中，并且当前分区负载没有达到上限
                     // 将边加入边集
@@ -561,15 +586,15 @@ void Model4Partitioner::sub_add_boundary(vid_t vid, size_t index) {
                     // TODO 这里是具有操作权限
                     min_heaps[index].decrease_key(u);
                     edges[neighbors[i].v].remove();
-                    std::swap(neighbors[i], neighbors.back());
-                    neighbors.pop_back();
+//                    std::swap(neighbors[i], neighbors.back());
+//                    neighbors.pop_back();
                 } else
                     i++;
             } else {
                 //swap是pop的前提，先交换到最后位置然后把长度减1
                 // TODO 因为对端顶点进行了操作，这里只需要清除，为什么会有错？
-                std::swap(neighbors[i], neighbors.back());
-                neighbors.pop_back();
+//                std::swap(neighbors[i], neighbors.back());
+//                neighbors.pop_back();
             }
         }
     }
@@ -588,6 +613,7 @@ void Model4Partitioner::add_boundary(vid_t vid) {
 
     // 如果顶点没有在核心集中，直接把顶点的度数据加入到最小堆
     // 因为在核心集中的顶点已经不需要处理了
+    // TODO 这里的size()是否合理
     if (!is_core.get(vid)) {
         min_heap.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
     }
@@ -636,7 +662,7 @@ void Model4Partitioner::assign_edge(size_t index, vid_t from, vid_t to)  {
     is_mirrors[from].set_bit_unsync(index);
     is_mirrors[to].set_bit_unsync(index);
     // TODO 这里需要原子操作，将assigned_edges改成原子类
-    assigned_edges++;
+    assigned_edges.fetch_add(1);
     // LOG(INFO) << "Assign edge " << from << " " << to << " to partition " << index;
     // LOG(INFO) << "Assigned edges: " << assigned_edges << endl;
     occupied[index]++;

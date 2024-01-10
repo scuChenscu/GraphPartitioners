@@ -18,9 +18,10 @@ class adjlist_t {
 private:
     uint40_t *adj; // 一个指向uint40_t类型数据的指针，存储顶点的邻边
     vid_t len;
+    vid_t initial_length;
 
 public:
-    adjlist_t() : adj(NULL), len(0) {}
+    adjlist_t() : adj(NULL), len(0), initial_length(0) {}
 
     adjlist_t(uint40_t *adj, vid_t len = 0) : adj(adj), len(len) {}
 
@@ -30,9 +31,16 @@ public:
 
     void increment() { len++; }
 
-    void push_back(size_t data) { adj[len++].v = data; }
+    void push_back(size_t data) {
+        adj[len++].v = data;
+        // initial_length++;
+    }
 
-    size_t size() const { return len; }
+    size_t size() const {
+        // TODO 这里改成initial_length，会影响到其他算法的逻辑
+        return len;
+        // return initial_length;
+    }
 
     uint40_t &operator[](size_t idx) { return adj[idx]; };
 
@@ -79,6 +87,8 @@ public:
     void build(const std::vector<edge_t> &edges);
 
     void build_reverse(const std::vector<edge_t> &edges);
+
+    void build_directed(const std::vector<edge_t> &edges, const std::vector<size_t> &reverse_indices);
 
     // 重载运算符
     adjlist_t &operator[](size_t idx) { return vdata[idx]; };

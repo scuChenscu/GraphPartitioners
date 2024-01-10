@@ -30,7 +30,7 @@ protected:
 
 
     // 已经分配的边数
-    size_t assigned_edges;
+    atomic<size_t> assigned_edges;
     // 每个分区顶点的数目
     vector<size_t> num_vertices_each_partition;
 
