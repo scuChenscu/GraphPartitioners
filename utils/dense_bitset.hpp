@@ -10,6 +10,7 @@
 #include <cstdint>
 #include "util.hpp"
 
+
 // 稠密位图
 class dense_bitset {
 public:
@@ -107,7 +108,35 @@ public:
         size_t arrpos, bitpos;
         bit_to_pos(b, arrpos, bitpos);
         const size_t mask(size_t(1) << size_t(bitpos));
+        const size_t old = *(array + arrpos);
+        // 通过或操作将某位设为1
         return __sync_fetch_and_or(array + arrpos, mask) & mask;
+    }
+    // TODO 实现得有问题
+    inline bool cas_bit(size_t b) {
+        // 当该位为0时，设置为1
+        size_t arrpos, bitpos;
+        bit_to_pos(b, arrpos, bitpos);
+        const size_t mask(size_t(1) << size_t(bitpos));
+        // 如果为0则执行
+        return __sync_val_compare_and_swap(array + arrpos, 0, mask) & mask;
+    }
+
+    inline bool acquire(size_t b) {
+        // use CAS to set the bit
+        size_t arrpos, bitpos;
+        bit_to_pos(b, arrpos, bitpos);
+        const size_t mask(size_t(1) << size_t(bitpos));
+        return __sync_val_compare_and_swap(array + arrpos, 0, mask);
+    }
+
+    inline bool release(size_t b) {
+        // use CAS to set the bit
+        size_t arrpos, bitpos;
+        bit_to_pos(b, arrpos, bitpos);
+        const size_t test_mask(size_t(1) << size_t(bitpos));
+        const size_t clear_mask(~test_mask);
+        return __sync_val_compare_and_swap(array + arrpos,1, clear_mask) & test_mask;
     }
 
     //! Atomically xors a bit with 1
@@ -427,7 +456,8 @@ public:
 private:
     inline static void bit_to_pos(size_t b, size_t &arrpos, size_t &bitpos) {
         // the compiler better optimize this...
-        arrpos = b / (8 * sizeof(size_t));
+        // array数组是size_t类型，整个长度为
+        arrpos = b / (8 * sizeof(size_t)); // 数组下标
         bitpos = b & (8 * sizeof(size_t) - 1);
     }
 
@@ -457,6 +487,8 @@ private:
             return;
         array[arrlen - 1] &= ((size_t(1) << lastbits) - 1);
     }
+
+
 
     size_t *array;
     size_t len;
