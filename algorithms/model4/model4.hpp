@@ -26,7 +26,7 @@ using namespace std;
 class Model4Partitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
-    const double CAPACITY_RATIO = 0.50;
+    const double CAPACITY_RATIO = 1.00;
 
     vector<vid_t> indices; // new_vid, old_vid
     // TODO 记录每个原始顶点在indices的下表
@@ -117,9 +117,9 @@ public:
         bool success = __sync_bool_compare_and_swap(&v_lock[vid], 0, 1);
         std::thread::id currentThreadId = std::this_thread::get_id();
         if (success) {
-            // LOG(INFO) << "Thread ID: " << currentThreadId << " acquires vid: " << vid << std::endl;
+            LOG(INFO) << "Thread ID: " << currentThreadId << " acquires vid: " << vid << std::endl;
         } else {
-            // LOG(INFO) << "Thread ID: " << currentThreadId << " fails to acquire vid: " << vid << std::endl;
+            LOG(INFO) << "Thread ID: " << currentThreadId << " fails to acquire vid: " << vid << std::endl;
         }
         return success;
     }
@@ -127,9 +127,9 @@ public:
     bool release_vertex(size_t vid) {
         bool success = __sync_bool_compare_and_swap(&v_lock[vid], 1, 0);
         if (success) {
-            // LOG(INFO) << "Thread ID: " << std::this_thread::get_id() << " releases vid: " << vid << std::endl;
+            LOG(INFO) << "Thread ID: " << std::this_thread::get_id() << " releases vid: " << vid << std::endl;
         } else {
-            // LOG(INFO) << "Thread ID: " << std::this_thread::get_id() << " fails to release vid: " << vid << std::endl;
+            LOG(ERROR) << "Thread ID: " << std::this_thread::get_id() << " fails to release vid: " << vid << std::endl;
         }
         return success;
     }

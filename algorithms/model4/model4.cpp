@@ -339,12 +339,7 @@ void Model4Partitioner::sub_split(size_t index) {
             min_heaps[index].remove(vid);
             LOG(INFO) << "Min_heaps " << index << " remove: " << vid << " degree: " << degree << endl;
         }
-        // 把顶点加入到C，即核心集
-        // TODO 每个core都是从自己的core中获取顶点，不会存在冲突问题
-        // LOG(INFO) << "Occupy Core " << index << " " << vid << endl;
-        // TODO 这里面报错
         sub_occupy_vertex(vid, degree, index);
-        // LOG(INFO) << "Occupy Core " << index << " " << vid << " finished " << endl;
         if (free) {
             LOG(INFO) << "Release " << vid << endl;
             release_vertex(vid);
@@ -352,29 +347,6 @@ void Model4Partitioner::sub_split(size_t index) {
     }
     // 确保前面不会有误
     LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
-    // return;
-    //TODO 因为每个分区独立使用min_heap,不需要清空最小堆
-//    min_heaps[current_partition].clear();
-//    is_cores[current_partition].clear();
-//    is_boundaries[current_partition].clear();
-    //TODO 为什么要全局扫描，移除已经分配的邻边
-
-    // TODO 这里改成只去除当前core顶点的邻边
-    vid_t min = index * num_vertices_each_cores;
-    vid_t max = (index + 1) * num_vertices_each_cores - 1;
-    rep(direction, 2)for (vid_t vid = min; vid <= max; ++vid) {
-            // 获取所有顶点的邻接表
-            adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
-            for (size_t i = 0; i < neighbors.size();) {
-                if (edges[neighbors[i].v].valid()) {
-                    i++;
-                } else {
-                    // TODO 并发问题
-                    std::swap(neighbors[i], neighbors.back());
-                    neighbors.pop_back();
-                }
-            }
-        }
 }
 
 void Model4Partitioner::re_index() {
@@ -470,60 +442,13 @@ bool Model4Partitioner::get_free_vertex(vid_t &vid) {
 
 void Model4Partitioner::sub_occupy_vertex(vid_t vid, vid_t d, size_t index) {
     CHECK(!is_cores[index].get(vid)) << "add " << vid << " to core again";
-    // 核心集是vector<dense_bitset>，dense_bitset是一个稠密位图
-    // 对位图的vid位置置1，表示vid被分配到num_partitions分区
-
-    // 1. 把顶点加入核心集和边界集，不需要考虑重复设置的场景
     is_cores[index].set_bit_unsync(vid);
-
-
-    // is_boundaries[partition].set_bit_unsync(vid);
-    // 顶点的来源有两种情况，一是从V，二是从S\C
-    // 如果顶点的度为0，不需要处理
     if (d == 0) return;
-    // TODO 这一步没有问题，因为选出来的定带你肯定属于当前core
-    // LOG(INFO) << "occupy vertex from core " << indices[vid] << " to core " << index << endl;
-    // TODO 分配顶点到当前分区的时候，执行add_boundary的逻辑
-    // TODO 把一个顶点加入到核心集，同时也把这个顶点加入到边界集；如果已经在边界集，则不用处理，否则处理
     sub_add_boundary(vid, index);
 
-    // LOG(INFO) << "occupy vertex from core " << indices[vid] << " to core " << index << endl;
-    // 2. 遍历vid的邻居顶点，把不属于边界集的顶点加入到边界集
-    // TODO 把顶点的邻居加入到边界集，加入条件为：顶点所属的core在当前core之上
-    // TODO 重复选取顶点不会有影响
-//    for (auto &i: adj_out[vid]) {
-//        // TODO CAS太费操作了，改成谁小归谁
-//        if (edges[i.v].valid()) {
-//            vid_t neighbor = edges[i.v].second;
-//            // TODO 这里不对indices是一个数组，并没有包含顶点所属的分区信息，需要额外一个数组
-//            size_t reverse_index = reverse_indices[neighbor];
-//            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
-//            if (neighbor_partition >= current_partition) {
-//                sub_add_boundary(neighbor, index);
-//            }
-//        }
-//    }
-//
-//
-//    for (auto &i: adj_in[vid]) {
-//        if (edges[i.v].valid()) {
-//            vid_t neighbor = edges[i.v].first;
-//            size_t reverse_index = reverse_indices[neighbor];
-//            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
-//            if (neighbor_partition >= current_partition) {
-//                sub_add_boundary(neighbor, index);
-//            }
-//        }
-//    }
-    // 把邻居顶点加入到边界集，这里要注意先获取到顶点的锁
     for (auto &i: adj_directed[vid]) {
         if (edges[i.v].valid()) {
             vid_t neighbor = edges[i.v].second == vid ? edges[i.v].first : edges[i.v].second;
-//            size_t reverse_index = reverse_indices[neighbor];
-//            size_t neighbor_partition = reverse_index / num_vertices_each_cores;
-//            if (neighbor_partition >= current_partition) {
-//                sub_add_boundary(neighbor, index);
-//            }
             if (acquire_vertex(neighbor)) {
                 if (edges[i.v].valid()) {
                     // TODO 这里记录了指向顶点的边，直接分配，因为neighbor没有持有该边
@@ -536,14 +461,11 @@ void Model4Partitioner::sub_occupy_vertex(vid_t vid, vid_t d, size_t index) {
             }
         }
     }
-
-
-    // LOG(INFO) << "occupy vertex from core " << indices[vid] << " to core " << index << " finished" << endl;
-    // TODO 这里清空，因为每个顶点只属于一个core，但是在后续的二次分配时，要重新使用，有点麻烦
-    // TODO 跑完之后不能删除，会影响别的线程
-    // adj_out[vid].clear();
-    // adj_in[vid].clear();
 }
+
+
+
+
 
 void Model4Partitioner::occupy_vertex(vid_t vid, vid_t d) {
     CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
@@ -578,96 +500,30 @@ void Model4Partitioner::sub_add_boundary(vid_t vid, size_t index) {
 
     is_boundary.set_bit_unsync(vid);
     if (!is_core.get(vid)) {
-        // vid_t degree = adj_out[vid].size() + adj_in[vid].size();
         vid_t degree = adj_directed[vid].size();
         CHECK_GE(degree, 0) << "Degree is 0";
         min_heaps[index].insert(degree, vid);
         LOG(INFO) << "Min_heaps " << index << " insert: " << vid << " degree: " << degree << endl;
-
-
+    }  else {
+        return;
     }
-
     adjlist_t &neighbors = adj_directed[vid];
-    // 2. 遍历邻居
-    // ===================================================================================
-    // 如果顶点是从V\S加入到C，下面的for循环不会进去，因为此时它的所有顶点都在V\S
     for (auto &neighbor: neighbors) {
-        // 这里都不需要释放锁
-        vid_t u = edges[neighbor.v].second == vid ? edges[neighbor.v].first : edges[neighbor.v].second;
-//            if (is_core.get(u) && occupied[index] < capacity * CAPACITY_RATIO) {
-//                // TODO 这里不对
-//                assign_edge(index, u, vid);
-//                // min_heaps[index].decrease_key(vid);
-//            } else
-        if (is_boundary.get(u) && occupied[index] < capacity * CAPACITY_RATIO) {
-            assign_edge(index, vid, u);
-            min_heaps[index].decrease_key(vid);
-            LOG(INFO) << "Min_heaps " << index << " decrease_key: " << vid << endl;
-            edges[neighbor.v].remove();
-            // u并没有持有该边
-            // min_heaps[index].decrease_key(u);
+        if (edges[neighbor.v].valid()) {
+            // 这里都不需要释放锁
+            vid_t u = edges[neighbor.v].second == vid ? edges[neighbor.v].first : edges[neighbor.v].second;
+            if (is_boundary.get(u) && occupied[index] < capacity * CAPACITY_RATIO) {
+                assign_edge(index, vid, u);
+                min_heaps[index].decrease_key(vid);
+                LOG(INFO) << "Min_heaps " << index << " decrease_key: " << vid << endl;
+                edges[neighbor.v].remove();
+            }
         }
     }
-
-    // TODO 如果顶点是从V\S直接加到C，是否还要走下面的逻辑？
-    // 不需要，但是这里判断不了是不是直接从V\S直接加到C，因为在方法外面赋值的
-
-    // TODO 单向边只是解决了两个顶点争抢边的问题；
-    // TODO 还要解决顶点副本导致边重分配的问题；
-
-    // TODO 反正就是将顶点加入到边界集都要执行的逻辑：把顶点x加入到边界集，判断它的邻居在S还是C，不会引入新的顶点，因为是加边的操作
-
-    // 3. 把顶点的在边界集的邻居顶点的边加入到当前边集
-    // TODO 这里也需要判断顶点的邻居是否在当前分区
-//    rep (direction, 2) {
-//        adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
-//        // 遍历顶点的邻边
-//        for (size_t i = 0; i < neighbors.size();) {
-//            // TODO 1.边有效，2.对端顶点符合：1.在边界集，2.在核心集
-//            // TODO 会出现多个线程操作同一个顶点的adj；需要保证线程安全！！！
-//            if (edges[neighbors[i].v].valid()) { // 边不会有线程安全的问题，因为根据设定只有一个顶点具备操作这条边的权限
-//                vid_t& u = direction ? edges[neighbors[i].v].second : edges[neighbors[i].v].first;
-//                // TODO 这里需要判断对端顶点所在的core，如果不在同一个core，应该如何处理
-//                size_t reverse_index = reverse_indices[u];
-//                size_t neighbor_partition = reverse_index / num_vertices_each_cores;
-//                // TODO 判断对端顶点是可以被当前core处理的
-//                if (neighbor_partition < current_partition) {
-//                    // LOG(INFO) << "neighbor_partition: " << neighbor_partition << " current_partition: " << current_partition << endl;
-//                    continue;
-//                }
-//                if (is_core.get(u) && occupied[index] < capacity * CAPACITY_RATIO) { // 如果顶点在核心集中
-//                    assign_edge(index, direction ? vid : u,
-//                                direction ? u : vid);
-//                    // TODO 移除一条边
-//                    min_heaps[index].decrease_key(vid);
-//                    // TODO 这里没有线程安全的问题，因为remove只是一个set操作
-//                    edges[neighbors[i].v].remove();
-//                    //TODO 交换到最后位置，然后长度减1
-//                    // TODO 该操作会有线程安全问题，可能多个线程操作同一个顶点的neighbors
-//                    // TODO 能否把以下操作改为原地操作
-////                    std::swap(neighbors[i], neighbors.back());
-////                    neighbors.pop_back();
-//                } else if (is_boundary.get(u) &&
-//                           occupied[index] < capacity * CAPACITY_RATIO) { // 如果顶点在边界集中，并且当前分区负载没有达到上限
-//                    // 将边加入边集
-//                    assign_edge(index, direction ? vid : u, direction ? u : vid);
-//                    min_heaps[index].decrease_key(vid);
-//                    // TODO 这里是具有操作权限
-//                    min_heaps[index].decrease_key(u);
-//                    edges[neighbors[i].v].remove();
-////                    std::swap(neighbors[i], neighbors.back());
-////                    neighbors.pop_back();
-//                } else
-//                    i++;
-//            } else {
-//                //swap是pop的前提，先交换到最后位置然后把长度减1
-//                // TODO 因为对端顶点进行了操作，这里只需要清除，为什么会有错？
-////                std::swap(neighbors[i], neighbors.back());
-////                neighbors.pop_back();
-//            }
-//        }
-//    }
 }
+
+
+
 
 void Model4Partitioner::add_boundary(vid_t vid) {
     // 获取到当前分区的核心集和边界集
