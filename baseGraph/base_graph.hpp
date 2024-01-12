@@ -19,7 +19,7 @@ static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
 static const string algorithms[] = {  "model4"};
-static  const string graph_suffix = "mdual.graph";
+static  const string graph_suffix = "4elt.graph";
 static const bool isShuffle = false;
 
 class BaseGraph {

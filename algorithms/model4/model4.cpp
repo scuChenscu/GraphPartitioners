@@ -185,8 +185,8 @@ void Model4Partitioner::split() {
     // LOG(INFO) << "Start sub_split" << endl;
     // sub_split(0);
     LOG(INFO) << "Model4 multi-partitioning finished!" << endl;
-    CHECK_EQ(assigned_edges, num_edges);
-    return;
+//    CHECK_EQ(assigned_edges, num_edges);
+//    return;
     // TODO 资源清理
 //    min_heaps.clear();
 //    vertex_ofstream.close();
@@ -207,10 +207,11 @@ void Model4Partitioner::split() {
 //    // v_set.clear();
 
     // return;
-    min_heap = min_heaps[0];
     // 前p-1个分区
     LOG(INFO) << "Start building the first num_partitions-1 full partition" << endl;
     for (current_partition = 0; current_partition < num_partitions - 1; current_partition++) {
+        // TODO 这里的最小堆有问题，它只存了顶点的单向边数据，所以前面的单向边加锁还是有问题的
+        // TODO 重构最小堆？或者前面维护着双堆
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
         while (occupied[current_partition] < capacity) {
             vid_t degree, vid;
@@ -227,8 +228,6 @@ void Model4Partitioner::split() {
             // 把顶点加入到C，即核心集
             occupy_vertex(vid, degree);
         }
-        //TODO 清空最小堆
-        // LOG(INFO) << "Clear min heap" << endl;
         min_heap.clear();
 
         //TODO 感觉不应该在这里操作，应该在分配顶点的时候就更新
