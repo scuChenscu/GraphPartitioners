@@ -9,6 +9,7 @@
 #include "../algorithms/ldg/ldg.hpp"
 #include "../algorithms/fennel/fennel.hpp"
 #include "../algorithms/model4/model4.hpp"
+#include "../algorithms/model5/model5.hpp"
 
 BaseGraph::BaseGraph(const string &graph_name) {
     this->graph_name = graph_name;
@@ -96,6 +97,8 @@ void BaseGraph::partition() {
             if (algorithm == "ne") {
                 partitioner = new NePartitioner(*this, graph_name, algorithm, num_partition);
             } else if (algorithm == "model4") {
+                partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partition);
+            } else if (algorithm == "model5") {
                 partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partition);
             } else if (algorithm == "dbh") {
                 partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partition, memory_size);

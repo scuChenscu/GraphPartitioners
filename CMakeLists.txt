@@ -20,6 +20,7 @@ add_library(SOURCE_FILES
         utils/graph.cpp
         algorithms/ne/ne.cpp
         algorithms/model4/model4.cpp
+        algorithms/model5/model5.cpp
         algorithms/dbh/dbh.cpp
         algorithms/hdrf/hdrf.cpp
         algorithms/ldg/ldg.cpp
