@@ -26,6 +26,11 @@ struct edge_t {
     [[nodiscard]] bool valid() const { return first != INVALID_VID; }
 
     void remove() { first = INVALID_VID; }
+
+    void set_partition(size_t partition) {
+        first = INVALID_VID;
+        second = partition;
+    }
 };
 
 inline string change2tmpdir(const string &str) {

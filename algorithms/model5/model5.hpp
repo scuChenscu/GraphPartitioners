@@ -28,7 +28,7 @@ private:
     const double BALANCE_RATIO = 1.00;
     const double CAPACITY_RATIO = 0.45;
     // cores = thread::hardware_concurrency();
-    const size_t cores = 4;
+    const size_t cores = 8;
     vector<vid_t> indices; // new_vid, old_vid
     // TODO 记录每个原始顶点在indices的下表
     vector<size_t> reverse_indices;
@@ -69,6 +69,9 @@ private:
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
     vector<dense_bitset> is_mirrors;
+
+    vector<dense_bitset> reverse_is_mirrors;
+
     dense_bitset visited;
     // 记录已经被使用过的边
     dense_bitset assigned;
@@ -93,9 +96,9 @@ private:
 
 
     // 根据算法定义，把顶点加入的核心集时，需要把它的所有边都加入到边集合中
-    void occupy_vertex(vid_t vid, vid_t d);
+    // void occupy_vertex(vid_t vid, vid_t d);
 
-    void sub_occupy_vertex(vid_t vid, vid_t d, size_t index);
+    // void sub_occupy_vertex(vid_t vid, vid_t d, size_t index);
 
 
     bool get_free_vertex(vid_t &vid);

@@ -44,6 +44,9 @@ Model5Partitioner::Model5Partitioner(BaseGraph &baseGraph, const string &input, 
     is_boundaries.assign(num_partitions, dense_bitset(num_vertices));
     true_vids.resize(num_vertices);
     is_mirrors.assign(num_vertices, dense_bitset(num_partitions));
+
+    reverse_is_mirrors.assign(num_partitions, dense_bitset(num_vertices));
+
     master.assign(num_vertices, -1);
     dis.param(
             std::uniform_int_distribution<vid_t>::param_type(0, num_vertices - 1));
@@ -189,31 +192,22 @@ void Model5Partitioner::split() {
         threads[i].join();
     }
 
-
-    // TODO 先保证单个分区不出现错误
-    // LOG(INFO) << "Start sub_split" << endl;
-    // sub_split(0);
     LOG(INFO) << "Model5 multi-partitioning finished!" << endl;
-    // total_time.stop();
-    // LOG(INFO) << "Total time: " << total_time.get_time() << endl;
-    // return;
-    // 前p-1个分区
     LOG(INFO) << "Start building the first num_partitions - 1 full partition" << endl;
-    // 用位图来维护每个分区新引入的顶点
-    dirty_vertices.resize(num_vertices);
-    for (current_partition = 0; current_partition < num_partitions - 1; current_partition++) {
-        // LOG(INFO) << "Start partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
-        min_heap = min_heaps[current_partition];
-        LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heap.size() << endl;
-        while (occupied[current_partition] < capacity) {
-            vid_t degree, vid;
+    // TODO 下面的逻辑实现得有问题
 
+    for (current_partition = 0; current_partition < num_partitions - 1; current_partition++) {
+        // min_heap = min_heaps[current_partition];
+        LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heaps[current_partition].size() << endl;
+        while (occupied[current_partition] < capacity * BALANCE_RATIO) {
+            vid_t degree, vid;
             bool has_min = false;
-            while (min_heap.size() > 0) {
-                min_heap.get_min(degree, vid);
-                min_heap.remove(vid);
+            while (min_heaps[current_partition].size() > 0) {
+                min_heaps[current_partition].get_min(degree, vid);
+                min_heaps[current_partition].remove(vid);
                 if (!vertex_adjacent_edges[vid].empty()) {
                     // 更新degree
+                    // CHECK_EQ(degree, vertex_adjacent_edges[vid].size());
                     degree = vertex_adjacent_edges[vid].size();
                     has_min = true;
                     break;
@@ -226,22 +220,30 @@ void Model5Partitioner::split() {
                 // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
                 degree = adj_directed[vid].size();
             }
-            // 把顶点加入到C，即核心集
+
             CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
+            // 把顶点x加入到S和C
             is_cores[current_partition].set_bit_unsync(vid);
             is_boundaries[current_partition].set_bit_unsync(vid);
 
-            for (auto &pair: vertex_adjacent_edges[vid]) {
-                edge_t &edge = *pair.second;
+
+            auto iterator = vertex_adjacent_edges[vid].begin();
+            while(iterator != vertex_adjacent_edges[vid].end()){
+                edge_t &edge = *iterator->second;
                 if (edge.valid()) {
-                    vid_t neighbor = edge.first == vid ? edge.second : edge.first;
-                    if (edge.valid()) {
-                        add_boundary(neighbor);
-                    }
-                }
+                    vid_t& neighbor = edge.first == vid ? edge.second : edge.first;
+                        if (edge.valid()) {
+                            add_boundary(neighbor);
+                            if (!edge.valid()) {
+                                vertex_adjacent_edges[vid].erase(iterator++);
+                            } else iterator++;
+                        } else {
+                            iterator++;
+                        }
+                } else iterator++;
             }
         }
-        min_heap.clear();
+        // min_heap.clear();
         LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
     }
     LOG(INFO) << "Start building the last full partition" << endl;
@@ -256,40 +258,40 @@ void Model5Partitioner::split() {
 
 
     //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
-    vector<vid_t> current_partitions(num_partitions);
-    capacity = (double) true_vids.popcount() * 1.05 / num_partitions + 1;
-
-    // 复制因子
-    rep(i, num_vertices) {
-        double max_score = 0.0;
-        vid_t which_p;
-        bool unique = false;
-        // 判断顶点是否只属于一个分区
-        if (is_mirrors[i].popcount() == 1) {
-            unique = true;
-        }
-        // 计算顶点的分区最高得分
-        repv(j, num_partitions) {
-            if (is_mirrors[i].get(j)) {
-                num_vertices_in_partition[j]++; // 每个分区的顶点数
-                double score = (part_degrees[i][j] / (degrees[i] + 1)) + (current_partitions[j] < capacity ? 1 : 0);
-                if (unique) {
-                    which_p = j;
-                    break;
-                } else if (max_score < score) {
-                    max_score = score;
-                    which_p = j;
-                }
-            }
-        }
-        // 用最高得分所在的分区作为顶点的最终分区
-        ++current_partitions[which_p];
-        save_vertex(i, which_p);
-        balance_vertex_distribute[i] = which_p;
-    }
+//    vector<vid_t> current_partitions(num_partitions);
+//    capacity = (double) true_vids.popcount() * 1.05 / num_partitions + 1;
+//
+//    // 复制因子
+//    rep(i, num_vertices) {
+//        double max_score = 0.0;
+//        vid_t which_p;
+//        bool unique = false;
+//        // 判断顶点是否只属于一个分区
+//        if (is_mirrors[i].popcount() == 1) {
+//            unique = true;
+//        }
+//        // 计算顶点的分区最高得分
+//        repv(j, num_partitions) {
+//            if (is_mirrors[i].get(j)) {
+//                // num_vertices_in_partition[j]++; // 每个分区的顶点数
+//                double score = (part_degrees[i][j] / (degrees[i] + 1)) + (current_partitions[j] < capacity ? 1 : 0);
+//                if (unique) {
+//                    which_p = j;
+//                    break;
+//                } else if (max_score < score) {
+//                    max_score = score;
+//                    which_p = j;
+//                }
+//            }
+//        }
+//        // 用最高得分所在的分区作为顶点的最终分区
+//        ++current_partitions[which_p];
+//        save_vertex(i, which_p);
+//        balance_vertex_distribute[i] = which_p;
+//    }
     // vertex_ofstream.close();
     repv(j, num_partitions) {
-        LOG(INFO) << "Partition " << j << " Vertex Count: " << current_partitions[j];
+        // LOG(INFO) << "Partition " << j << " Vertex Count: " << current_partitions[j];
         LOG(INFO) << "Partition " << j << " Edge Count: " << occupied[j];
     }
 
@@ -300,7 +302,6 @@ void Model5Partitioner::split() {
     size_t idx = 0;
     for (auto &e: edges) {
         vid_t sp = balance_vertex_distribute[e.first], tp = balance_vertex_distribute[e.second];
-
         save_edge(e.first, e.second, sp);
         save_edge(e.second, e.first, tp);
     }
@@ -320,16 +321,13 @@ void Model5Partitioner::sub_split(size_t index) {
         vid_t degree, vid;
         // 尝试从当前分区所属的最小堆中获取顶点
         if (!min_heaps[index].get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
-            // LOG(INFO) << "sub_get_free_vertex" << endl;
             if (!sub_get_free_vertex(vid, index)) { // 当V\C已经没有顶点，结束算法
                 break;
             }
             degree = vertex_adjacent_edges[vid].size();
         } else {
             min_heaps[index].remove(vid);
-            // LOG(INFO) << "Min_heaps " << index << " remove: " << vid << " degree: " << degree << endl;
         }
-        // sub_occupy_vertex(vid, degree, index);
         CHECK(!is_cores[index].get(vid)) << "add " << vid << " to core again";
         is_cores[index].set_bit_unsync(vid);
         is_boundaries[index].set_bit_unsync(vid);
@@ -352,12 +350,10 @@ void Model5Partitioner::sub_split(size_t index) {
                 } else iterator++;
             } else iterator++;
         }
-        // LOG(INFO) << "Min_heap " << index << "  size: " << min_heaps[index].size() << endl;
         release_vertex(vid);
     }
     // 确保前面不会有误
     LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
-    // LOG(INFO) << "Min_heap " << index << "  size: " << min_heaps[index].size() << endl;
 }
 
 
@@ -430,50 +426,6 @@ bool Model5Partitioner::get_free_vertex(vid_t &vid) {
     return true;
 }
 
-void Model5Partitioner::sub_occupy_vertex(vid_t vid, vid_t d, size_t index) {
-    CHECK(!is_cores[index].get(vid)) << "add " << vid << " to core again";
-    is_cores[index].set_bit_unsync(vid);
-    if (d == 0) return;
-    sub_add_boundary(vid, index);
-
-    for (auto &i: adj_directed[vid]) {
-        if (edges[i.v].valid()) {
-            vid_t neighbor = edges[i.v].second == vid ? edges[i.v].first : edges[i.v].second;
-            if (acquire_vertex(neighbor)) {
-                if (edges[i.v].valid()) {
-                    // TODO 这里记录了指向顶点的边，直接分配，因为neighbor没有持有该边
-                    assign_edge(index, vid, neighbor);
-                    edges[i.v].remove();
-                    sub_add_boundary(neighbor, index);
-                } else {
-                    release_vertex(neighbor);
-                }
-            }
-        }
-    }
-}
-
-
-void Model5Partitioner::occupy_vertex(vid_t vid, vid_t d) {
-    CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
-    is_cores[current_partition].set_bit_unsync(vid);
-    if (d == 0) return;
-
-    add_boundary(vid);
-
-    for (auto &i: adj_directed[vid]) {
-        if (edges[i.v].valid()) {
-            vid_t neighbor = edges[i.v].second == vid ? edges[i.v].first : edges[i.v].second;
-                if (edges[i.v].valid()) {
-                    // TODO 这里记录了指向顶点的边，直接分配，因为neighbor没有持有该边
-                    assign_edge(current_partition, vid, neighbor);
-                    edges[i.v].remove();
-                    sub_add_boundary(neighbor, current_partition);
-                }
-        }
-    }
-}
-
 void Model5Partitioner::sub_add_boundary(vid_t vid, size_t index) {
     auto &is_core = is_cores[index];
     auto &is_boundary = is_boundaries[index];
@@ -498,6 +450,7 @@ void Model5Partitioner::sub_add_boundary(vid_t vid, size_t index) {
                 min_heaps[index].decrease_key(vid);
                 vertex_adjacent_edges[vid].erase(iterator++);
                 edge.remove();
+                edge.set_partition(index);
                 // vertex_adjacent_edges[neighbor].erase(e_id);
             } else if (is_boundary.get(neighbor) && occupied[index] < capacity * CAPACITY_RATIO) {
                 assign_edge(index, edge.first, edge.second);
@@ -506,6 +459,7 @@ void Model5Partitioner::sub_add_boundary(vid_t vid, size_t index) {
                 vertex_adjacent_edges[vid].erase(iterator++);
                 vertex_adjacent_edges[neighbor].erase(e_id);
                 edge.remove();
+                edge.set_partition(index);
             } else {
                 iterator++;
             }
@@ -522,42 +476,46 @@ void Model5Partitioner::add_boundary(vid_t vid) {
     auto &is_boundary = is_boundaries[current_partition];
 
     // 如果已经被加入到边界集，直接返回
-    if (is_boundary.get(vid))
-        return;
+    if (is_boundary.get(vid)) return;
     // 把顶点加入到边界集
     is_boundary.set_bit_unsync(vid);
 
-    CHECK(!is_cores[current_partition].get(vid)) << vid << " is in core";
-
-    CHECK(!is_cores[current_partition].get(vid)) << vid << " is in core";
+    CHECK(!is_core.get(vid)) << vid << " is in core";
 
     size_t degree = vertex_adjacent_edges[vid].size();
     CHECK_GE(degree, 0) << "Degree is 0";
+    // TODO 感觉是这个的问题？
     min_heaps[current_partition].insert(degree, vid);
 
-    for (auto &pair: vertex_adjacent_edges[vid]) {
-        edge_t &edge = *pair.second;
-        size_t e_id = pair.first;
+    auto iterator = vertex_adjacent_edges[vid].begin();
+    while (iterator != vertex_adjacent_edges[vid].end()) {
+        edge_t &edge = *iterator->second;
+        size_t e_id = iterator->first;
         if (edge.valid()) {
             vid_t neighbor = edge.first == vid ? edge.second : edge.first;
-            if (is_core.get(neighbor) && occupied[current_partition] < capacity) {
+            if (is_core.get(neighbor) && occupied[current_partition] < capacity * BALANCE_RATIO) {
                 assign_edge(current_partition, edge.first, edge.second);
                 min_heaps[current_partition].decrease_key(vid);
-                dirty_vertices.set_bit_unsync(vid);
+                vertex_adjacent_edges[vid].erase(iterator++);
                 edge.remove();
-            } else if (is_boundary.get(neighbor) && occupied[current_partition] < capacity) {
+            } else if (is_boundary.get(neighbor) && occupied[current_partition] < capacity * BALANCE_RATIO) {
                 assign_edge(current_partition, edge.first, edge.second);
                 min_heaps[current_partition].decrease_key(vid);
-                dirty_vertices.set_bit_unsync(vid);
                 min_heaps[current_partition].decrease_key(neighbor);
-                dirty_vertices.set_bit_unsync(neighbor);
+                vertex_adjacent_edges[vid].erase(iterator++);
+                vertex_adjacent_edges[neighbor].erase(e_id);
                 edge.remove();
+            } else {
+                iterator++;
             }
+        } else {
+            iterator++;
         }
     }
 }
 
 void Model5Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
+
     // edge_partition[e_id] = index;
     // save_edge(from, to, num_partitions);
     true_vids.set_bit_unsync(from);
@@ -565,6 +523,10 @@ void Model5Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
     // TODO 并发问题
     is_mirrors[from].set_bit_unsync(index);
     is_mirrors[to].set_bit_unsync(index);
+
+    reverse_is_mirrors[index].set_bit_unsync(from);
+    reverse_is_mirrors[index].set_bit_unsync(to);
+
 //    is_mirrors[from].set_bit(index);
 //    is_mirrors[to].set_bit(index);
     // TODO 这里需要原子操作，将assigned_edges改成原子类
@@ -616,7 +578,7 @@ void Model5Partitioner::build_vertex_adjacent_edges() {
 
 void Model5Partitioner::calculate_alpha() {
     // 对每个分区的边界集求和
-    for (size_t i = 0; i < num_partitions; i++) {
+    for (size_t i = 0; i < reverse_is_mirrors.size(); i++) {
         replicas += is_boundaries[i].popcount();
     }
     replication_factor = replication_factor = (double) replicas / (double) num_vertices;

@@ -18,7 +18,7 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {  "ne"};
+static const string algorithms[] = {  "model5", "ne"};
 static  const string graph_suffix = "mdual.graph";
 static const bool isShuffle = false;
 
