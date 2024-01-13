@@ -18,6 +18,7 @@ EdgePartitioner::~EdgePartitioner() = default;
 
 // 计算副本
 void EdgePartitioner::calculate_replication_factor() {
+    if (replicas > 0) return;
     for (auto &is_mirror: is_mirrors) {
         replicas += is_mirror.popcount();
     }

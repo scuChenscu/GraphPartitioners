@@ -76,7 +76,7 @@ public:
             array[i] = 0;
     }
 
-    inline bool empty() const {
+    [[nodiscard]] inline bool empty() const {
         for (size_t i = 0; i < arrlen; ++i)
             if (array[i])
                 return false;

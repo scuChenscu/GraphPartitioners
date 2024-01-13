@@ -26,19 +26,21 @@ using namespace std;
 class Model5Partitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
-    const double CAPACITY_RATIO = 1.00;
-
+    const double CAPACITY_RATIO = 0.45;
+    // cores = thread::hardware_concurrency();
+    const size_t cores = 4;
     vector<vid_t> indices; // new_vid, old_vid
     // TODO 记录每个原始顶点在indices的下表
     vector<size_t> reverse_indices;
     vector<size_t> v_lock;
     string input;
     double average_degree;
+    dense_bitset dirty_vertices;
     size_t capacity;
     size_t num_vertices_each_cores;
     vector<vector<vid_t> > part_degrees;
     vector<size_t> balance_vertex_distribute;
-    size_t cores;
+    // size_t cores;
     size_t avg_vertices_each_partition;
     // MinHeap<vid_t, vid_t> d; // 顶点的度
     // 存储边
@@ -53,7 +55,9 @@ private:
     vector<MinHeap<vid_t, vid_t> > min_heaps;
     size_t current_partition;
     //每个分区边的数量
-    vector<size_t> occupied;
+    // vector<size_t> occupied;
+    // 每条边的分区
+    vector<size_t> edge_partition;
     // TODO 需要一个结构存储每个分区顶点的数目
     vector<size_t> num_vertices_in_partition;
 
@@ -121,9 +125,9 @@ public:
         bool success = __sync_bool_compare_and_swap(&v_lock[vid], 0, 1);
         std::thread::id currentThreadId = std::this_thread::get_id();
         if (success) {
-            LOG(INFO) << "Thread ID: " << currentThreadId << " acquires vid: " << vid << std::endl;
+            // LOG(INFO) << "Thread ID: " << currentThreadId << " acquires vid: " << vid << std::endl;
         } else {
-            LOG(INFO) << "Thread ID: " << currentThreadId << " fails to acquire vid: " << vid << std::endl;
+            // LOG(INFO) << "Thread ID: " << currentThreadId << " fails to acquire vid: " << vid << std::endl;
         }
         return success;
     }
@@ -131,11 +135,13 @@ public:
     bool release_vertex(size_t vid) {
         bool success = __sync_bool_compare_and_swap(&v_lock[vid], 1, 0);
         if (success) {
-            LOG(INFO) << "Thread ID: " << std::this_thread::get_id() << " releases vid: " << vid << std::endl;
+            // LOG(INFO) << "Thread ID: " << std::this_thread::get_id() << " releases vid: " << vid << std::endl;
         } else {
-            LOG(ERROR) << "Thread ID: " << std::this_thread::get_id() << " fails to release vid: " << vid << std::endl;
+            // LOG(ERROR) << "Thread ID: " << std::this_thread::get_id() << " fails to release vid: " << vid << std::endl;
         }
         return success;
     }
+
+    void calculate_alpha();
 };
 

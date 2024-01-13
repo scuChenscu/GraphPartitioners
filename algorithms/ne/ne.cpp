@@ -110,6 +110,7 @@ void NePartitioner::split() {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
         while (occupied[current_partition] < capacity) {
             vid_t degree, vid;
+            // LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heap.size() << endl;
             if (!min_heap.get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
                 if (!get_free_vertex(vid)) { // 当V\C已经没有顶点，结束算法
                     break;
@@ -180,9 +181,9 @@ void NePartitioner::split() {
         save_vertex(i, which_p);
         balance_vertex_distribute[i] = which_p;
     }
-    repv(j, num_partitions) {
-        LOG(INFO) << "Partition " << j << " Vertex Count: " << current_partitions[j];
-    }
+//    repv(j, num_partitions) {
+//        LOG(INFO) << "Partition " << j << " Vertex Count: " << current_partitions[j];
+//    }
 
     ifstream fin(binary_edgelist_name(input), ios::binary | ios::ate);
     fin.seekg(sizeof(num_vertices) + sizeof(num_edges), ios::beg);

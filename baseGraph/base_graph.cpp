@@ -99,7 +99,7 @@ void BaseGraph::partition() {
             } else if (algorithm == "model4") {
                 partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partition);
             } else if (algorithm == "model5") {
-                partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partition);
+                partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partition);
             } else if (algorithm == "dbh") {
                 partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partition, memory_size);
             } else if (algorithm == "hdrf") {

@@ -46,7 +46,7 @@ protected:
     // 计算副本
     void calculate_replication_factor();
 
-    // 计算负载均衡因子
+    virtual // 计算负载均衡因子
     void calculate_alpha();
 
     void calculate_indices() override;
