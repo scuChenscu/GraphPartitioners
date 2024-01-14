@@ -12,28 +12,28 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 4, 8};
+static const size_t partitions[] = { 8};
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {  "model5"};
-static  const string graph_suffix = "4elt.graph";
+static const string algorithms[] = {  "hdrf", "model5"};
+static  const string graph_suffix = "mdual.graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/input";
+const static string input = "../graphs/small-scale";
 
 
 // Ours参数
 static const bool SELF = true;
 static const double OURS_BALANCE_RATIO = 1.00;
-static const double OURS_CAPACITY_RATIO = 0.00;
+static const double OURS_CAPACITY_RATIO = 0.45;
 //static const size_t CORES = 1;
 //static const size_t MAX_CORES = thread::hardware_concurrency();
 //static const double OURS_CAPACITY_RATIOS[] = { 0.15, 0.30, 0.45, 0.60, 0.75,0.90};
 //static const double OURS_BALANCE_RATIOS[] = {1.00, 1.05, 1.10};
 // 简化
-static const size_t CORES = 1;
+static const size_t CORES = 4;
 static const size_t MAX_CORES = 4;
 static const double OURS_CAPACITY_RATIOS[] = { 0.30, 0.45, 0.60};
 static const double OURS_BALANCE_RATIOS[] = {1.00};

@@ -24,7 +24,10 @@ private:
     uint32_t num_edges_per_batch;
     double lambda;
 
-    vector<vid_t> degrees;
+    vector<size_t> degrees;
+
+    vector<size_t> partial_degrees;
+
     uint64_t max_partition_load;
 
     //balance vertex partition distribute
@@ -32,7 +35,7 @@ private:
     vector<int> balance_vertex_distribute; //each node belongs to which unique partition
 
     vector<uint64_t> edge_load;
-    vector<dense_bitset> is_mirrors;
+    // vector<dense_bitset> is_mirrors;
     dense_bitset true_vids;
     uint64_t min_load = UINT64_MAX;
     uint64_t max_load = 0;
@@ -40,7 +43,7 @@ private:
 protected:
     void batch_hdrf(vector<edge_t> &edges);
 
-    int find_max_score_partition_hdrf(edge_t &e);
+    int find_max_score_partition(edge_t &e);
 
     void update_is_mirrors(edge_t &e, int max_p);
 

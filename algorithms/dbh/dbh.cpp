@@ -73,6 +73,12 @@ void DbhPartitioner::batch_node_assignment(vector<edge_t> &edges) {
 }
 
 void DbhPartitioner::split() {
+    string current_time = getCurrentTime();
+    stringstream ss;
+    ss << "DBH" << endl;
+    LOG(INFO) << ss.str();
+    appendToFile(ss.str());
+
     total_time.start();
     for (auto &e: edges) {
         vid_t vid = degrees[e.first] <= degrees[e.second] ? e.first : e.second;
@@ -85,46 +91,5 @@ void DbhPartitioner::split() {
         true_vids.set_bit_unsync(e.first);
         true_vids.set_bit_unsync(e.second);
     }
-    read_and_do("dbh");
-    string current_time = getCurrentTime();
-    stringstream ss;
-    ss << "DBH" << endl;
-    LOG(INFO) << ss.str();
-    appendToFile(ss.str());
-    //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
-    size_t total_mirrors = 0;
-    vector<vid_t> buckets(num_partitions);
-    double capacity = (double) true_vids.popcount() * 1.05 / num_partitions + 1;
-    rep(i, num_vertices) {
-        total_mirrors += is_mirrors[i].popcount();
-        double max_score = 0.0;
-        vid_t which_p;
-        bool unique = false;
-        if (is_mirrors[i].popcount() == 1) {
-            unique = true;
-        }
-        repv(j, num_partitions) {
-            if (is_mirrors[i].get(j)) {
-//                double score=((i%p==j)?1:0)+(part_degrees[i][j]/(degrees[i]+1))+(buckets[j]< capacity?1:0);
-                double score = (part_degrees[i][j] / (degrees[i] + 1)) + (buckets[j] < capacity ? 1 : 0);
-                if (unique) {
-                    which_p = j;
-                } else if (max_score < score) {
-                    max_score = score;
-                    which_p = j;
-                }
-            }
-        }
-        ++buckets[which_p];
-        save_vertex(i, which_p);
-        balance_vertex_distribute[i] = which_p;
-    }
-    vertex_ofstream.close();
-    repv(j, num_partitions) {
-        LOG(INFO) << "each partition node count: " << buckets[j];
-    }
-
-    read_and_do("node_assignment");
     total_time.stop();
-    edge_ofstream.close();
 }

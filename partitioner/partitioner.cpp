@@ -15,6 +15,7 @@ adj_out(baseGraph.adj_out), adj_in(baseGraph.adj_in){
     this->adj_out = graph.adj_out;
     this->adj_in = graph.adj_in;
     this->degrees = graph.degrees;
+    this->true_vids = graph.true_vids;
 }
 
 // 配置边分区、顶点分区结果输出文件名

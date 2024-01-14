@@ -216,10 +216,6 @@ void Model5Partitioner::split() {
     CHECK_EQ(assigned_edges, num_edges);
     total_time.stop();
     LOG(INFO) << "total partition time: " << total_time.get_time() << endl;
-
-    repv(j, num_partitions) {
-        LOG(INFO) << "Partition " << j << " Edge Count: " << occupied[j];
-    }
 }
 
 // TODO 这里要注意不能用current_partition，current_partition是全局变量，只能用在后续建立完整分区

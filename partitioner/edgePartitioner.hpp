@@ -51,4 +51,6 @@ protected:
     void calculate_indices() override;
 
     void print_indices() override;
+
+    void print_partition_edges();
 };
