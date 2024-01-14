@@ -6,6 +6,7 @@
 #include <fstream>
 #include "../baseGraph/base_graph.hpp"
 #include "../utils/util.hpp"
+#include "../utils/dense_bitset.hpp"
 
 using namespace std;
 
@@ -20,22 +21,26 @@ protected:
     // 输出文件流对象
     ofstream edge_ofstream;
     ofstream vertex_ofstream;
-    // 需要执行分区算法的图
+    // 持有引用
     BaseGraph& graph;
     size_t num_partitions;
+    // TODO 每次分区会修改edges，已确认是拷贝，不会影响graph
     vector<edge_t> edges;
     vector<vid_t> vertices;
+    // 度数
+    vector<size_t> degrees;
+    // 真实顶点数
+    dense_bitset true_vids;
     string algorithm;
-    // TODO 图结构，都是从graph中获取，是否需要再重新申明
-    graph_t adj_out;
-    graph_t adj_in;
-    // TODO 修正为size_t
+    graph_t& adj_out;
+    graph_t& adj_in;
+    // TODO 这个不能改，因为二进制文件是用vid_t类型写入
     vid_t num_vertices;
     size_t num_edges;
     string graph_name;
 
 public:
-    explicit Partitioner(BaseGraph &baseGraph, const string& algorithm, size_t num_partitions);
+    explicit Partitioner(BaseGraph& baseGraph, const string& algorithm, size_t num_partitions);
 
     virtual void split() {
         LOG(ERROR) << "Derived class has not override split function" << endl;
@@ -58,7 +63,10 @@ public:
     // 输出边分区结果：from to partition_id
     void save_edge(vid_t from, vid_t to, int partition_id);
 
-    ~Partitioner();
+    ~Partitioner() {
+        edge_ofstream.close();
+        vertex_ofstream.close();
+    }
 };
 
 

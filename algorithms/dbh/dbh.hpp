@@ -22,13 +22,13 @@ using namespace std;
 class DbhPartitioner : public EdgePartitioner {
 private:
     size_t filesize;
-
     int memory_size;
     vector<vid_t> degrees;
     ifstream fin;
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
-    dense_bitset true_vids;;
+    dense_bitset true_vids;
+    // 记录每个分区的边数
     vector<size_t> counter;
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
@@ -46,6 +46,6 @@ public:
     DbhPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
                    size_t num_partitions, int memory_size);
 
-    void split();
-    virtual void calculate_replication_factor();
+    void split() override;
+    // void calculate_replication_factor() override;
 };

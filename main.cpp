@@ -15,32 +15,25 @@
 using namespace std;
 namespace fs = filesystem;
 // 原始图数据的路径
-const static string input = "../graphs/input";
 
 void signalHandler(int signum) {
-    std::cerr << "Segmentation Fault (signal " << signum << ")" << std::endl;
-
+    LOG(ERROR) << "Segmentation Fault (signal " << signum << ")" << endl;
     // 打印调用栈信息（需要编译时开启调试信息）
     // 注意: 打印调用栈信息可能需要开启编译器选项，如 "-g"。
     // 如果使用 g++，可以使用 "-g" 选项编译代码。
-    std::cerr << "Call stack:\n";
+    LOG(ERROR) << "Call stack:" << endl;
     system("backtrace");
-
     // 退出程序
     exit(signum);
 }
 
 int main() {
-
     signal(SIGABRT, signalHandler);
     signal(SIGSEGV, signalHandler);
     google::InitGoogleLogging("main");  //参数为自己的可执行文件名
     FLAGS_logtostderr = true;
 
     // read the edges and change to binary format file
-    Converter *converter;
-    // LOG(INFO) << "Using normal dataset, dont shuffle";
-    // 遍历input下的.graph文件
     string current_time = getCurrentTime();
     stringstream ss;
     ss << "==============================================================================================================================================" << endl
@@ -49,15 +42,15 @@ int main() {
        << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
-    ss.clear();
 
     for (const auto &entry: fs::directory_iterator(input)) {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
             string graph_name = entry.path().string();
+            // 判断是否为.graph类型文件
             if (!graph_name.ends_with(graph_suffix)) continue;
             LOG(INFO) << "Convert " << graph_name << " to binary edgelist" << endl;
-            converter = new Converter(graph_name);
+            auto *converter = new Converter(graph_name);
             convert(graph_name, converter, memory_size);
             delete converter;
             auto *baseGraph = new BaseGraph(graph_name);

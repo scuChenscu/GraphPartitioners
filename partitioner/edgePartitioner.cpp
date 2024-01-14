@@ -18,7 +18,7 @@ EdgePartitioner::~EdgePartitioner() = default;
 
 // 计算副本
 void EdgePartitioner::calculate_replication_factor() {
-    if (replicas > 0) return;
+    LOG(INFO) << "Calculating replication factor..." << endl;
     for (auto &is_mirror: is_mirrors) {
         replicas += is_mirror.popcount();
     }
@@ -27,6 +27,7 @@ void EdgePartitioner::calculate_replication_factor() {
 
 // 计算负载均衡因子
 void EdgePartitioner::calculate_alpha() {
+    LOG(INFO) << "Calculating alpha..." << endl;
     max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
     min_edge = *min_element(occupied.begin(), occupied.end());
 
@@ -41,6 +42,7 @@ void EdgePartitioner::calculate_indices() {
 
 void EdgePartitioner::print_indices() {
     stringstream result;
+    result << fixed << setprecision(5);
     result << "Cost Time: " << total_time.get_time()
            << " | Replication Factor: " << replication_factor
            << " | Alpha: " << alpha
@@ -48,12 +50,12 @@ void EdgePartitioner::print_indices() {
            << " | Partition: " << num_partitions
            << " | Max Edge: " << max_edge
            << " | Min Edge: " << min_edge
-           << " | Balance Ratio: " << balance_ratio
+           // << " | Balance Ratio: " << balance_ratio
            << " | Avg Edge: " << num_edges / num_partitions
            << " | Edges: " << num_edges
            << " | Vertices: " << num_vertices
            << endl;
+    LOG(INFO) << result.str();
     appendToFile(result.str());
 
-    LOG(INFO) << result.str() << endl;
 }

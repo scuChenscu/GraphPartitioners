@@ -11,20 +11,22 @@
 #include "../algorithms/model4/model4.hpp"
 #include "../algorithms/model5/model5.hpp"
 
-BaseGraph::BaseGraph(const string &graph_name) {
+using namespace std;
+
+BaseGraph::BaseGraph(const string& graph_name) {
     this->graph_name = graph_name;
 
     ifstream fin(binary_edgelist_name(graph_name),
-                 std::ios::binary | std::ios::ate);
+                 ios::binary | ios::ate);
     // tellp 用于返回写入位置，
     // tellg 则用于返回读取位置也代表着输入流的大小
     auto filesize = fin.tellg();
-    fin.seekg(0, std::ios::beg);
+    fin.seekg(0, ios::beg);
 
     //最大的下标+1
     fin.read((char *) &num_vertices, sizeof(num_vertices));
     fin.read((char *) &num_edges, sizeof(num_edges));
-    LOG(INFO) << "file size: " << filesize
+    LOG(INFO) << "File size: " << filesize
               << " | num_vertices: " << num_vertices
               << " | num_edges: " << num_edges
               << endl;
@@ -33,97 +35,111 @@ BaseGraph::BaseGraph(const string &graph_name) {
              filesize);
 
     edges.resize(num_edges);
+    degrees.resize(num_vertices, 0);
+    true_vids.resize(num_vertices);
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
-    adj_out.resize(num_vertices);
-    adj_in.resize(num_vertices);
+//    adj_out.resize(num_vertices);
+//    adj_in.resize(num_vertices);
     // 初始化的时候构造图
-    adj_out.build(edges);
+    // adj_out.build(edges);
     // 存储反向边
-    adj_in.build_reverse(edges);
-    construct_adj_list();
+    // adj_in.build_reverse(edges);
+    construct_adjacency_list();
     fin.close();
 }
-
-// 实现析构函数
-//BaseGraph::~BaseGraph() {
-//    edges.clear();
-//    vertices.clear();
-//    adjacency_list.clear();
-//     delete adj_out;
-//     delete adj_in;
-//}
-
-void BaseGraph::construct_adj_list() {
+// TODO 建立CSR
+void BaseGraph::construct_adjacency_list() {
     LOG(INFO) << "Construct adjacency list..." << endl;
     // 遍历边集，建立每个顶点的邻居集合
     for (auto &edge: edges) {
+        // 计算顶点度数
+        degrees[edge.first]++;
+        degrees[edge.second]++;
+        true_vids.set_bit_unsync(edge.first);
+        true_vids.set_bit_unsync(edge.second);
+
         if (adjacency_list.contains(edge.first)) {
             adjacency_list.find(edge.first)->second.insert(edge.second);
         } else {
-            std::set < vid_t > set;
+            set <vid_t> set;
             set.insert(edge.second);
             adjacency_list[edge.first] = set;
         }
         if (adjacency_list.contains(edge.second)) {
             adjacency_list.find(edge.second)->second.insert(edge.first);
         } else {
-            std::set < vid_t > set;
+            set <vid_t> set;
             set.insert(edge.first);
             adjacency_list[edge.second] = set;
         }
     }
 }
 
-// TODO 因为每次执行图分区算法会依赖很多的数据结构，只能通过重新创建partitioner的方式来实现
 void BaseGraph::partition() {
     // 所有的partitioner共享graph，即在一张图上面执行所有的partition算法，减少重复操作
-    LOG(INFO) << "Execute algorithms on: " << graph_name << endl;
-    stringstream graph;
-    graph << "Graph Name: " << graph_name << endl;
-    appendToFile(graph.str());
-    int size = sizeof(algorithms) / sizeof(algorithms[0]);
-    int partition = sizeof(partitions) / sizeof(partitions[0]);
-    // TODO 这里就频繁地创建和销毁partitioner，是否可以优化
-    for (int j = 0; j < partition; j++) {
-        size_t num_partition = partitions[j];
-        stringstream part;
-        part << "Partition: " << num_partition << endl;
-        LOG(INFO) << part.str();
-        appendToFile(part.str());
-        for (int i = 0; i < size; i++) {
-            string algorithm = algorithms[i];
-            LOG(INFO) << "Initialize " << algorithm << " partitioner: " << endl;
-            Partitioner* partitioner;
+    LOG(INFO) << "Start partition on " << graph_name << endl;
+    stringstream ss;
+    ss << "Graph Name: " << graph_name << endl;
+    appendToFile(ss.str());
+    ss.str("");  // 清空当前字符串内容
+    ss.clear();   // 清空错误状态标志
+    vector<Partitioner*> partitioners;
+    for (auto num_partitions : partitions) {
+        Partitioner* partitioner;
+//        ss << "Number Partitions: " << num_partitions << endl;
+//        appendToFile(ss.str());
+//        ss.str("");  // 清空当前字符串内容
+//        ss.clear();   // 清空错误状态标志
+        for (auto& algorithm : algorithms) {
+            // TODO this是一个指针
             if (algorithm == "ne") {
-                partitioner = new NePartitioner(*this, graph_name, algorithm, num_partition);
+                partitioner = new NePartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "model4") {
-                partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partition);
+                partitioner = new Model4Partitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "model5") {
-                partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partition);
+                // TODO 三个核心参数：cores、balance_ratio、capacity_ratio
+                if (SELF) {
+                    partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                    partitioners.push_back(partitioner);
+                    continue;
+                }
+                // 三层循环cores、balance_ratio、capacity_ratio
+                for(size_t cores = 1; cores < MAX_CORES; cores++) {
+                    for (auto ours_balance_ratio : OURS_BALANCE_RATIOS) {
+                        for (auto ours_capacity_ratio : OURS_CAPACITY_RATIOS) {
+                            partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partitions, ours_balance_ratio, ours_capacity_ratio, cores);
+                            partitioners.push_back(partitioner);
+                        }
+                    }
+                }
             } else if (algorithm == "dbh") {
-                partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partition, memory_size);
+                partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partitions, memory_size);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "hdrf") {
-                partitioner = new HdrfPartitioner(*this, graph_name, algorithm, num_partition, memory_size,
+                partitioner = new HdrfPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
                                                   balance_ratio, lambda, isShuffle);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "ldg") {
-                partitioner = new LdgPartitioner(*this, graph_name, algorithm, num_partition, memory_size, isShuffle);
+                partitioner = new LdgPartitioner(*this, graph_name, algorithm, num_partitions, memory_size, isShuffle);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "fennel") {
-                partitioner = new FennelPartitioner(*this, graph_name, algorithm, num_partition, memory_size,
+                partitioner = new FennelPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
                                                     isShuffle);
+                partitioners.push_back(partitioner);
             } else {
                 LOG(ERROR) << "Unknown algorithm: " << algorithm;
                 continue;
             }
-            LOG(INFO) << "Execute " << algorithm << " on: " << graph_name << endl;
-            partitioner->split();
-            LOG(INFO) << "Finish " << algorithm << " on: " << graph_name << endl;
-            partitioner->calculate_indices();
-            // LOG(INFO) << "Try to delete " << algorithm << " partitioner" << endl;
-            // TODO 这里显式调用partitioner会报错
-            // LOG(INFO) << partitioner << endl;
-            // LOG(INFO) << this << endl;
-            // delete partitioner;
-            // LOG(INFO) << "Delete " << algorithm << " partitioner successfully" << endl;
         }
+    }
+    for (auto partitioner : partitioners) {
+        // LOG(INFO) << "Execute " << algorithm << " on: " << graph_name << endl;
+        partitioner->split();
+        // LOG(INFO) << "Finish " << algorithm << " on: " << graph_name << endl;
+        partitioner->calculate_indices();
+        delete partitioner;
+        // 将指针设置为 nullptr，以防止悬垂指针
     }
 }

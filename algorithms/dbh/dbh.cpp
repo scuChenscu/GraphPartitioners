@@ -1,5 +1,9 @@
+#pragma once
 
 #include "dbh.hpp"
+
+using namespace std;
+// 以边为基本的划分单位
 // Degree Based Hashing (DBH)[6]分割通过判断结点的度信息来切分结点分配边。对于幂律图来说低度结点的局部性很容易保持，高度结点因为关联太多结点如果将边全部分配在一个子图上不太可能，因此该算法尽最大可能保持低度结点的局部性。
 // DBH也是把边划分到不同的分区，计算负载因子
 DbhPartitioner::DbhPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
@@ -7,8 +11,10 @@ DbhPartitioner::DbhPartitioner(BaseGraph& baseGraph, const string& input, const 
     config_output_files();
     ifstream fin(binary_edgelist_name(input),
                  std::ios::binary | std::ios::ate);
-    total_time.start();
     //degree file
+    filesize = fin.tellg();
+    fin.seekg(0, std::ios::beg);
+    this->memory_size = memory_size;
     degrees.resize(num_vertices);
     ifstream degree_file(degree_name(input), std::ios::binary);
     degree_file.read((char *) &degrees[0], num_vertices * sizeof(vid_t));
@@ -67,6 +73,18 @@ void DbhPartitioner::batch_node_assignment(vector<edge_t> &edges) {
 }
 
 void DbhPartitioner::split() {
+    total_time.start();
+    for (auto &e: edges) {
+        vid_t vid = degrees[e.first] <= degrees[e.second] ? e.first : e.second;
+        size_t partition = vid % num_partitions;
+        occupied[partition]++;
+        is_mirrors[e.first].set_bit_unsync(partition);
+        is_mirrors[e.second].set_bit_unsync(partition);
+        ++part_degrees[e.first][partition];
+        ++part_degrees[e.second][partition];
+        true_vids.set_bit_unsync(e.first);
+        true_vids.set_bit_unsync(e.second);
+    }
     read_and_do("dbh");
     string current_time = getCurrentTime();
     stringstream ss;
@@ -109,25 +127,4 @@ void DbhPartitioner::split() {
     read_and_do("node_assignment");
     total_time.stop();
     edge_ofstream.close();
-
-    // rep(i, p) LOG(INFO) << "edges in partition " << i << ": " << counter[i];
-    // LOG(INFO) << "replication factor: " << (double)total_mirrors / true_vids.popcount();
-    calculate_replication_factor();
-    LOG(INFO) << "total partition time: " << total_time.get_time();
-    stringstream result;
-    result << "Cost Time: " << total_time.get_time()
-           << " | Replication Factor: " << replication_factor
-           << endl;
-    appendToFile(result.str());
-}
-
-void DbhPartitioner::calculate_replication_factor() {
-    // 每个边集的顶点数求和除以总的顶点数
-    int replicas = 0;
-    for (auto & is_mirror : is_mirrors) repv(j, num_partitions) {
-            if (is_mirror.get(j)) {
-                replicas++;
-            }
-        }
-    replication_factor = (double) replicas / num_vertices;
 }

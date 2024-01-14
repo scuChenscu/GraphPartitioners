@@ -44,10 +44,9 @@ protected:
     // TODO 需要一个结构来记录每个边所属的分区
 
     // 计算副本
-    void calculate_replication_factor();
-
-    virtual // 计算负载均衡因子
-    void calculate_alpha();
+    virtual void calculate_replication_factor();
+    // 计算负载均衡因子
+    virtual void calculate_alpha();
 
     void calculate_indices() override;
 
