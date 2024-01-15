@@ -44,8 +44,23 @@ BaseGraph::BaseGraph(const string& graph_name) {
     // adj_out.build(edges);
     // 存储反向边
     // adj_in.build_reverse(edges);
+    gen.seed(DEFAULT_SEED);
+
+    dis.param(
+            std::uniform_int_distribution<vid_t>::param_type(0, num_vertices - 1));
+    visited = dense_bitset(num_vertices);
+    indices.resize(num_vertices);
+    reverse_indices.resize(num_vertices);
+
     construct_adjacency_list();
-    fin.close();
+
+    // 重新索引
+    if (REINDEX) {
+        LOG(INFO) << "re_index" << endl;
+        re_index();
+    }
+
+
 }
 // TODO 建立CSR
 void BaseGraph::construct_adjacency_list() {
@@ -106,7 +121,7 @@ void BaseGraph::partition() {
                     continue;
                 }
                 // 三层循环cores、balance_ratio、capacity_ratio
-                for(size_t cores = 1; cores < MAX_CORES; cores++) {
+                for(size_t cores = 1; cores <= MAX_CORES; cores++) {
                     for (auto ours_balance_ratio : OURS_BALANCE_RATIOS) {
                         for (auto ours_capacity_ratio : OURS_CAPACITY_RATIOS) {
                             partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partitions, ours_balance_ratio, ours_capacity_ratio, cores);
@@ -142,4 +157,37 @@ void BaseGraph::partition() {
         delete partitioner;
         // 将指针设置为 nullptr，以防止悬垂指针
     }
+}
+
+void BaseGraph::re_index() {
+    queue<vid_t> v_queue;
+    auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
+    // 随机选择顶点，进行广度遍历，重新索引
+    vid_t index = 0;
+    vid_t vid = dis(gen);
+    // 基于该顶点进行深度遍历，对每个顶点重新索引
+    v_queue.push(vid);
+    while (!v_queue.empty()) {
+        // LOG(INFO) << index;
+        vid_t v = v_queue.front();
+        v_queue.pop();
+        if (visited.get(v)) {
+            continue;
+        }
+        visited.set_bit_unsync(v);
+        // 将v加入到indices,重新索引
+        reverse_indices[v] = index; // vid所在indices的下标为index
+        indices[index++] = v;
+
+        // 获取v的邻居顶点
+        if (!adjacency_list.contains(v)) continue;
+        set < vid_t > neighbor_set = adjacency_list.find(v)->second;
+        // 将neighbor_set加入v_queue和v_set中
+        for (auto &i: neighbor_set) {
+            v_queue.push(i);
+        }
+    }
+    auto end = std::chrono::high_resolution_clock::now(); // 记录结束时间
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // 计算时间差
+    LOG(INFO) << "re_index time: " << duration.count() << "ms" << endl;
 }

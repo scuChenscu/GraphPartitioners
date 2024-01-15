@@ -6,6 +6,7 @@
 #include <fstream>
 #include <set>
 #include <thread>
+#include <random>
 #include <unordered_set>
 #include "../utils/util.hpp"
 #include "../utils/graph.hpp"
@@ -19,26 +20,26 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {   "fennel"};
+static const string algorithms[] = {    "model5"};
+// com-amazon.graph这个图有问题，不太好用
 static  const string graph_suffix = "mdual.graph";
 static const bool isShuffle = false;
 const static string input = "../graphs/small-scale";
-
-
+const static bool REINDEX = true;
 // Ours参数
-static const bool SELF = true;
+static const bool SELF = false;
 static const double OURS_BALANCE_RATIO = 1.00;
 static const double OURS_CAPACITY_RATIO = 0.45;
+static const size_t CORES = 8;
 //static const size_t CORES = 1;
 //static const size_t MAX_CORES = thread::hardware_concurrency();
 //static const double OURS_CAPACITY_RATIOS[] = { 0.15, 0.30, 0.45, 0.60, 0.75,0.90};
 //static const double OURS_BALANCE_RATIOS[] = {1.00, 1.05, 1.10};
 // 简化
-static const size_t CORES = 4;
 static const size_t MAX_CORES = 4;
-static const double OURS_CAPACITY_RATIOS[] = { 0.30, 0.45, 0.60};
+static const double OURS_CAPACITY_RATIOS[] = {  1.0};
 static const double OURS_BALANCE_RATIOS[] = {1.00};
-
+static  const unsigned DEFAULT_SEED = 985;
 
 class BaseGraph {
 public:
@@ -62,9 +63,16 @@ public:
 
     string graph_name;
 
+    vector<size_t> reverse_indices;
+    vector<size_t> indices;
+    dense_bitset visited;
+    mt19937 gen;
+    //均匀分布区间
+    uniform_int_distribution<vid_t> dis;
     // 构造函数
     explicit BaseGraph(const string &graph_name);
 
     void construct_adjacency_list();
     void partition();
+    void re_index();
 };

@@ -22,12 +22,10 @@ Model5Partitioner::Model5Partitioner(BaseGraph& baseGraph,
     num_vertices_each_cores = num_vertices / cores;
 
     adj_directed.resize(num_vertices);
-    visited = dense_bitset(num_vertices);
     assigned = dense_bitset(num_edges);
     edge_partition.resize(num_edges);
     vertex_lock = dense_bitset(num_vertices);
-    indices.resize(num_vertices);
-    reverse_indices.resize(num_vertices);
+
     v_lock.resize(num_vertices, 0);
     // 每个都分配num_vertices大小，保证不会有问题
     is_cores.assign(num_partitions, dense_bitset(num_vertices));
@@ -115,9 +113,7 @@ void Model5Partitioner::assign_master() {
 void Model5Partitioner::split() {
     LOG(INFO) << "Build vertex adjacent edges" << endl;
     build_vertex_adjacent_edges();
-    // 重新索引
-    LOG(INFO) << "re_index" << endl;
-    re_index();
+
     // 根据边的两端顶点所属的cores建立有向边
     LOG(INFO) << "Build direction edge" << endl;
     adj_directed.build_directed(edges, reverse_indices);
@@ -261,38 +257,7 @@ void Model5Partitioner::sub_split(size_t index) {
 }
 
 
-void Model5Partitioner::re_index() {
-    queue<vid_t> v_queue;
-    auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
-    // 随机选择顶点，进行广度遍历，重新索引
-    vid_t index = 0;
-    vid_t vid = dis(gen);
-    // 基于该顶点进行深度遍历，对每个顶点重新索引
-    v_queue.push(vid);
-    while (!v_queue.empty()) {
-        // LOG(INFO) << index;
-        vid_t v = v_queue.front();
-        v_queue.pop();
-        if (visited.get(v)) {
-            continue;
-        }
-        visited.set_bit_unsync(v);
-        // 将v加入到indices,重新索引
-        reverse_indices[v] = index; // vid所在indices的下标为index
-        indices[index++] = v;
 
-        // 获取v的邻居顶点
-        if (!adjacency_list.contains(v)) continue;
-        set < vid_t > neighbor_set = adjacency_list.find(v)->second;
-        // 将neighbor_set加入v_queue和v_set中
-        for (auto &i: neighbor_set) {
-            v_queue.push(i);
-        }
-    }
-    auto end = std::chrono::high_resolution_clock::now(); // 记录结束时间
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); // 计算时间差
-    LOG(INFO) << "re_index time: " << duration.count() << "ms" << endl;
-}
 
 bool Model5Partitioner::sub_get_free_vertex(vid_t &vid, vid_t index) {
     vid_t min = index * num_vertices_each_cores;
@@ -484,5 +449,5 @@ void Model5Partitioner::calculate_replication_factor() {
     for (size_t i = 0; i < reverse_is_mirrors.size(); i++) {
         replicas += is_boundaries[i].popcount();
     }
-    replication_factor = replication_factor = (double) replicas / (double) num_vertices;
+    replication_factor = replication_factor = (double) replicas / (double) true_vids.popcount();
 }

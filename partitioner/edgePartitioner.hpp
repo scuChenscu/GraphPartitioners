@@ -40,6 +40,10 @@ protected:
     vector<dense_bitset> is_mirrors;
     // TODO 需要一个结构来记录每个边所属的分区
 
+    dense_bitset visited;
+    vector<size_t> indices;
+    vector<size_t> reverse_indices;
+
     // 计算副本
     virtual void calculate_replication_factor();
     // 计算负载均衡因子

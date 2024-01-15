@@ -27,9 +27,9 @@ private:
     size_t cores;
     double capacity_ratio;
     // new_vid, old_vid
-    vector<vid_t> indices;
-    // TODO 记录每个原始顶点在indices的下标
-    vector<size_t> reverse_indices;
+//    vector<vid_t> indices;
+//    // TODO 记录每个原始顶点在indices的下标
+//    vector<size_t> reverse_indices;
     vector<size_t> v_lock;
     string input;
     double average_degree;
@@ -59,13 +59,12 @@ private:
 
     vector<dense_bitset> reverse_is_mirrors;
 
-    dense_bitset visited;
+    // dense_bitset visited;
     // 记录已经被使用过的边
     dense_bitset assigned;
     // 顶点锁，保证只能有一个线程持有某个顶点
     dense_bitset vertex_lock;
     //随机数生成器
-    //std::random_device rd;
     mt19937 gen;
     //均匀分布区间
     uniform_int_distribution<vid_t> dis;
@@ -103,7 +102,7 @@ public:
     void split() override;
 
     // 广度遍历，重新索引，用于将顶点分块
-    void re_index();
+    // void re_index();
 
     bool acquire_vertex(size_t vid) {
         bool success = __sync_bool_compare_and_swap(&v_lock[vid], 0, 1);

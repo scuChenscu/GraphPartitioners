@@ -8,6 +8,10 @@ EdgePartitioner::EdgePartitioner(BaseGraph &baseGraph, const std::string &algori
     this->occupied.assign(num_partitions, 0);
     this->is_mirrors.assign(num_vertices, dense_bitset(num_partitions));
 
+    this->indices = baseGraph.indices;
+    this->visited = baseGraph.visited;
+    this->reverse_indices = baseGraph.reverse_indices;
+
     replication_factor = 0.0;
     alpha = 0.0;
     replicas = 0;
@@ -23,6 +27,7 @@ void EdgePartitioner::calculate_replication_factor() {
     for (auto &is_mirror: is_mirrors) {
         replicas += is_mirror.popcount();
     }
+    // TODO 这里用true_vids.popcount()
     replication_factor = (double) replicas / (double) true_vids.popcount();
 }
 
