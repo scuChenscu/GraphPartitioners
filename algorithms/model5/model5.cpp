@@ -143,10 +143,14 @@ void Model5Partitioner::split() {
             threads[i] = thread(&Model5Partitioner::sub_split, this, i);
         }
         total_time.start();
+        Timer t;
+        t.start();
         for (int i = 0; i < cores; ++i) {
             threads[i].join();
         }
-        LOG(INFO) << "Model5 multi-partitioning finished!" << endl;
+        t.stop();
+        // LOG(INFO) << "Model5 multi-partitioning time: " << t.get_time() << endl;
+        // LOG(INFO) << "Model5 multi-partitioning finished!" << endl;
     } else {
         total_time.start();
         LOG(INFO) << "Cores: " << cores << " , less than 1, use single thread" << endl;
@@ -155,6 +159,8 @@ void Model5Partitioner::split() {
     LOG(INFO) << "Start building the first num_partitions - 1 full partition" << endl;
 
     for (current_partition = 0; current_partition < num_partitions - 1; current_partition++) {
+        Timer t;
+        t.start();
         // min_heap = min_heaps[current_partition];
         // LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heaps[current_partition].size() << endl;
         while (occupied[current_partition] < capacity * balance_ratio) {
@@ -201,7 +207,10 @@ void Model5Partitioner::split() {
                 } else iterator++;
             }
         }
+        t.stop();
+        LOG(INFO) << "Partition " << current_partition << " time: " << t.get_time() << endl;
         LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
+
     }
     LOG(INFO) << "Start building the last full partition" << endl;
     current_partition = num_partitions - 1;
@@ -216,7 +225,9 @@ void Model5Partitioner::split() {
 
 // TODO 这里要注意不能用current_partition，current_partition是全局变量，只能用在后续建立完整分区
 void Model5Partitioner::sub_split(size_t index) {
-    LOG(INFO) << "Start sub_split " << index << endl;
+    // LOG(INFO) << "Start sub_split " << index << endl;
+    Timer t;
+    t.start();
     while (occupied[index] <= capacity * capacity_ratio) {
         vid_t degree, vid;
         // 尝试从当前分区所属的最小堆中获取顶点
@@ -252,8 +263,10 @@ void Model5Partitioner::sub_split(size_t index) {
         }
         release_vertex(vid);
     }
+    t.stop();
+    // LOG(INFO) << "End sub_split " << index << " time: " << t.get_time() << endl;
     // 确保前面不会有误
-    LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
+    // LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
 }
 
 

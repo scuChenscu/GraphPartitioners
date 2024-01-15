@@ -142,7 +142,7 @@ public:
 
     void stop() {
         t2 = chrono::system_clock::now();
-        chrono::duration<double> diff = t2 - t1;
+        chrono::duration<double, milli> diff = t2 - t1;
         total += diff.count();
     }
 

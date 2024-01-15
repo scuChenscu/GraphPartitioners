@@ -38,12 +38,12 @@ BaseGraph::BaseGraph(const string& graph_name) {
     degrees.resize(num_vertices, 0);
     true_vids.resize(num_vertices);
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
-//    adj_out.resize(num_vertices);
-//    adj_in.resize(num_vertices);
+    adj_out.resize(num_vertices);
+    adj_in.resize(num_vertices);
     // 初始化的时候构造图
-    // adj_out.build(edges);
-    // 存储反向边
-    // adj_in.build_reverse(edges);
+     adj_out.build(edges);
+     // 存储反向边
+     adj_in.build_reverse(edges);
     gen.seed(DEFAULT_SEED);
 
     dis.param(
