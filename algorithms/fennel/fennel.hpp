@@ -44,7 +44,7 @@ protected:
 
     void addNeighbors(edge_t &edge);
 
-    int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
+    size_t intersection(vid_t vid, size_t partition);
 
 public:
     FennelPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle);
@@ -52,4 +52,6 @@ public:
     void split();
 
     void calculate_edge_cut();
+
+
 };

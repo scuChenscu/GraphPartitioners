@@ -3,8 +3,9 @@
 #include "partitioner.hpp"
 
 Partitioner::Partitioner(BaseGraph& baseGraph, const string& algorithm, const size_t num_partitions): graph(baseGraph), num_partitions(num_partitions), algorithm(algorithm),
-adj_out(baseGraph.adj_out), adj_in(baseGraph.adj_in){
+adj_out(baseGraph.adj_out), adj_in(baseGraph.adj_in), adjacency_list(baseGraph.adjacency_list){
     this->graph = baseGraph;
+    // TODO 邻接表，每个顶点的邻居顶点；该数据应该来自Graph
     this->graph_name = graph.graph_name;
     this-> num_partitions = num_partitions;
     this->edges = graph.edges;
@@ -16,6 +17,7 @@ adj_out(baseGraph.adj_out), adj_in(baseGraph.adj_in){
     this->adj_in = graph.adj_in;
     this->degrees = graph.degrees;
     this->true_vids = graph.true_vids;
+    this->adjacency_list = baseGraph.adjacency_list;
 }
 
 // 配置边分区、顶点分区结果输出文件名

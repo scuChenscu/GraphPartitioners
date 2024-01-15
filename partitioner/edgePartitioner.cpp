@@ -4,7 +4,7 @@
 
 EdgePartitioner::EdgePartitioner(BaseGraph &baseGraph, const std::string &algorithm,
                                  const size_t num_partitions) : Partitioner(baseGraph, algorithm, num_partitions) {
-    this->adjacency_list = baseGraph.adjacency_list;
+    // this->adjacency_list = baseGraph.adjacency_list;
     this->occupied.assign(num_partitions, 0);
     this->is_mirrors.assign(num_vertices, dense_bitset(num_partitions));
 
@@ -32,7 +32,7 @@ void EdgePartitioner::calculate_alpha() {
     max_edge = *max_element(occupied.begin(), occupied.end()); // 获取最大值
     min_edge = *min_element(occupied.begin(), occupied.end());
 
-    alpha = (double) max_edge * (double) num_partitions / (double) graph.num_edges;
+    alpha = (double) max_edge * (double) num_partitions / (double) num_edges;
 }
 
 void EdgePartitioner::calculate_indices() {

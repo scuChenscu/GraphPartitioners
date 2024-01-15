@@ -39,6 +39,9 @@ protected:
     size_t num_edges;
     string graph_name;
 
+    unordered_map<vid_t, set<vid_t>>& adjacency_list;
+
+
 public:
     explicit Partitioner(BaseGraph& baseGraph, const string& algorithm, size_t num_partitions);
 

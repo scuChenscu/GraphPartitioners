@@ -6,6 +6,7 @@
 #include <fstream>
 #include <set>
 #include <thread>
+#include <unordered_set>
 #include "../utils/util.hpp"
 #include "../utils/graph.hpp"
 #include "../utils//dense_bitset.hpp"
@@ -18,7 +19,7 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {  "hdrf", "model5"};
+static const string algorithms[] = {   "fennel"};
 static  const string graph_suffix = "mdual.graph";
 static const bool isShuffle = false;
 const static string input = "../graphs/small-scale";

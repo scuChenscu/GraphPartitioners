@@ -22,15 +22,16 @@ private:
     size_t num_edges;
     size_t filesize;
 
-    int p;
+    // int p;
     ifstream fin;
 
     uint32_t num_batches;
     uint32_t num_edges_per_batch;
-
-    vector<unordered_set<vid_t> > node2neis;
+    // 每个顶点的邻居顶点
+    vector<unordered_set<vid_t>> node2neis;
     unordered_set<vid_t> true_vids;
-    vector<unordered_set<vid_t> > subg_vids;
+    // 每个子图的顶点
+    vector<unordered_set<vid_t>> subg_vids;
     vector<int> balance_vertex_distribute;
 
 protected:
@@ -42,12 +43,14 @@ protected:
 
     void addNeighbors(edge_t &edge);
 
-    int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
+    // int intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2);
+
+    size_t intersection(vid_t vid, size_t partition);
 
 public:
-    LdgPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm, const size_t num_partitions, int memory_size, bool shuffle);
+    LdgPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm, size_t num_partitions, int memory_size, bool shuffle);
 
-    void split();
+    void split() override;
 
     void calculate_edge_cut();
 };

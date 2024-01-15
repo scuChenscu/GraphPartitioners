@@ -7,7 +7,6 @@ FennelPartitioner::FennelPartitioner(BaseGraph& baseGraph,const string& input, c
     config_output_files();
     LOG(INFO) << "begin init class";
     // TODO 为什么在这里就开始计算耗时
-    total_time.start();
     //edge file
     if (shuffle) {
         fin.open(shuffled_binary_edgelist_name(input), std::ios::binary | std::ios::ate);
@@ -77,67 +76,59 @@ void FennelPartitioner::addNeighbors(edge_t &edge) {
     node2neis[edge.second].insert(edge.first);
 }
 
-int FennelPartitioner::intersection(unordered_set<vid_t> &nums1, unordered_set<vid_t> &nums2) {
-    // 建立unordered_set存储nums1数组(清除了重复的元素)
-    unordered_set < vid_t > ans;
-    for (auto num: nums2) {
-        if (nums1.count(num) == 1)
-            ans.insert(num);
+size_t FennelPartitioner::intersection(vid_t vid, size_t partition) {
+    if (!adjacency_list.contains(vid)) return 0;
+    int count = 0;
+    for (auto neighbor : adjacency_list.find(vid)->second) {
+        if (partition_vertices[partition].get(neighbor)) {
+            count++;
+        }
     }
-    return ans.size();
+    // LOG(INFO) << count;
+    return count;
 }
 
 void FennelPartitioner::do_fennel() {
-    // Ordering of streaming vertices
-    // TODO 为什么不用true_vcount
-    vector<int> ordering(num_vertices);
+    // shuffle_vertices of streaming vertices
+    vector<int> shuffle_vertices(num_vertices);
     for (int i = 0; i < num_vertices; ++i) {
-        ordering[i] = i;
+        shuffle_vertices[i] = i;
     }
-    // TODO 设置随机种子，乱序所有顶点
+
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(ordering.begin(), ordering.end(), g);
+    shuffle(shuffle_vertices.begin(), shuffle_vertices.end(), g);
 
     // Initial partitions
-    // TODO 这段代码的含义？为了保证每个分区初始顶点数大于0？
-    for (int i = 0; i < p; ++i) {
-        // subg_vids的size为p, 插入前p个顶点
-        subg_vids[i].insert(ordering[i]);
-        save_vertex(ordering[i], i);
+    size_t i = 0;
+    for (; i < num_partitions; i++) {
+        assigned_vertex(shuffle_vertices[i], i);
     }
 
-    int true_vcount = true_vids.size();
     const double gamma = 3 / 2.0;
     const double alpha =
-            num_edges * pow(p, (gamma - 1)) / pow(true_vcount, gamma);
-    const double load_limit = 1.1 * true_vcount / p;
+            num_edges * pow(num_partitions, (gamma - 1)) / pow(num_vertices, gamma);
+    const double load_limit = 1.1 * num_vertices / num_partitions;
     // TODO 感觉这里是不是会对前面的p个顶点进行冗余分区
-    for (int i = 0; i < (vid_t) num_vertices; i++) {
-        vid_t v = ordering[i];
+    for (;i < num_vertices; i++) {
+        vid_t v = shuffle_vertices[i];
         if (i % 10000 == 0)
             cout << i << "/" << num_vertices << endl;
-        if (true_vids.find(v) != true_vids.end()) {
-            vector<double> from_scores(p, 0);
+            vector<double> from_scores(num_partitions, 0);
             // 计算每个分区的得分
-            for (int id = 0; id < p; id++) {
-                double partitionSize = subg_vids[id].size();
+            for (int id = 0; id < num_partitions; id++) {
+                double partitionSize = num_vertices_each_partition[id];
                 if (partitionSize <= load_limit) {
                     double firstVertexIntraCost;
-                    double weightedGreedy =
-                            (1 - (partitionSize / ((double) true_vcount / (double) p)));
-                    double firstVertextInterCost = intersection(node2neis[v], subg_vids[id]);
+                    double firstVertexInterCost = intersection(v, id);
                     firstVertexIntraCost = alpha * gamma * pow(partitionSize, gamma - 1);
-                    from_scores[id] = firstVertextInterCost - firstVertexIntraCost;
+                    from_scores[id] = firstVertexInterCost - firstVertexIntraCost;
                 }
             }
             //最大值所在序列的位置
             int firstIndex = distance(from_scores.begin(),
                                       max_element(from_scores.begin(), from_scores.end()));
-            balance_vertex_distribute[v] = firstIndex;
-            subg_vids[firstIndex].insert(v);
-            save_vertex(v, firstIndex);
-        }
+        assigned_vertex(v, firstIndex);
     }
 }
 
@@ -157,31 +148,11 @@ void FennelPartitioner::batch_node_assignment(vector<edge_t> &edges) {
 }
 
 void FennelPartitioner::split() {
-    LOG(INFO) << "begin process neighbors";
-
     stringstream ss;
     ss << "Fennel" << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
-
-
-    read_and_do("process neighbors");
-    LOG(INFO) << "begin write nodes";
+    total_time.start();
     do_fennel();
-    LOG(INFO) << "begin write edges";
-    read_and_do("node_assignment");
     total_time.stop();
-    edge_ofstream.close();
-    LOG(INFO) << "total vertex count: " << true_vids.size();
-    LOG(INFO) << "total partition time: " << total_time.get_time();
-
-    stringstream result;
-    result << "Cost Time: " << total_time.get_time()
-           << "| Edge Cut: " << edge_cut
-           << endl;
-    appendToFile(result.str());
-}
-
-void FennelPartitioner::calculate_edge_cut() {
-
 }
