@@ -58,6 +58,8 @@ BaseGraph::BaseGraph(const string& graph_name) {
     if (REINDEX) {
         LOG(INFO) << "re_index" << endl;
         re_index();
+    } else {
+
     }
 
 
@@ -74,6 +76,7 @@ void BaseGraph::construct_adjacency_list() {
         true_vids.set_bit_unsync(edge.second);
 
         if (adjacency_list.contains(edge.first)) {
+            // LOG(INFO) << edge.first;
             adjacency_list.find(edge.first)->second.insert(edge.second);
         } else {
             set <vid_t> set;
@@ -81,6 +84,7 @@ void BaseGraph::construct_adjacency_list() {
             adjacency_list[edge.first] = set;
         }
         if (adjacency_list.contains(edge.second)) {
+            // LOG(INFO) << edge.second;
             adjacency_list.find(edge.second)->second.insert(edge.first);
         } else {
             set <vid_t> set;
@@ -160,12 +164,14 @@ void BaseGraph::partition() {
 }
 
 void BaseGraph::re_index() {
+    LOG(INFO) << adjacency_list.size();
     queue<vid_t> v_queue;
     auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
     // 随机选择顶点，进行广度遍历，重新索引
     vid_t index = 0;
     vid_t vid = dis(gen);
     // 基于该顶点进行深度遍历，对每个顶点重新索引
+    // TODO 该顶点可能没有邻居
     v_queue.push(vid);
     while (!v_queue.empty()) {
         // LOG(INFO) << index;
@@ -181,7 +187,8 @@ void BaseGraph::re_index() {
 
         // 获取v的邻居顶点
         if (!adjacency_list.contains(v)) continue;
-        set < vid_t > neighbor_set = adjacency_list.find(v)->second;
+        // LOG(INFO) << v;
+        set <vid_t> neighbor_set = adjacency_list.find(v)->second;
         // 将neighbor_set加入v_queue和v_set中
         for (auto &i: neighbor_set) {
             v_queue.push(i);

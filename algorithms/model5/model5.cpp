@@ -21,7 +21,7 @@ Model5Partitioner::Model5Partitioner(BaseGraph& baseGraph,
     capacity = (double) num_edges * balance_ratio / (double)num_partitions + 1;
     num_vertices_each_cores = num_vertices / cores;
 
-    adj_directed.resize(num_vertices);
+//    adj_directed.resize(num_vertices);
     assigned = dense_bitset(num_edges);
     edge_partition.resize(num_edges);
     vertex_lock = dense_bitset(num_vertices);
@@ -59,10 +59,18 @@ void Model5Partitioner::assign_remaining() {
     auto &is_boundary = is_boundaries[num_partitions - 1];
     auto &is_core = is_cores[num_partitions - 1];
 
+    int rep = 0;
     // 遍历边集合
     for (auto &e: edges) {
         if (e.valid()) {
             assign_edge(num_partitions - 1, e.first, e.second);
+            if (!is_boundary.get(e.first)) {
+                rep++;
+            }
+            if (!is_boundary.get(e.second)) {
+                rep++;
+            }
+
             // TODO 这里要判断核心集合吗？一个顶点只能在一个核心集
             is_boundary.set_bit_unsync(e.first);
             is_boundary.set_bit_unsync(e.second);
@@ -78,6 +86,7 @@ void Model5Partitioner::assign_remaining() {
             }
         }
     }
+    LOG(INFO) << "Rep: " << rep;
 }
 
 void Model5Partitioner::assign_master() {
@@ -112,11 +121,12 @@ void Model5Partitioner::assign_master() {
 
 void Model5Partitioner::split() {
     LOG(INFO) << "Build vertex adjacent edges" << endl;
+    // 记录每个顶点的边数
     build_vertex_adjacent_edges();
 
     // 根据边的两端顶点所属的cores建立有向边
-    LOG(INFO) << "Build direction edge" << endl;
-    adj_directed.build_directed(edges, reverse_indices);
+//    LOG(INFO) << "Build direction edge" << endl;
+//    adj_directed.build_directed(edges, reverse_indices);
 
     min_heaps.resize(num_partitions, MinHeap<vid_t, vid_t>(num_vertices));
 
@@ -149,7 +159,7 @@ void Model5Partitioner::split() {
             threads[i].join();
         }
         t.stop();
-        // LOG(INFO) << "Model5 multi-partitioning time: " << t.get_time() << endl;
+        LOG(INFO) << "Model5 multi-partitioning time: " << t.get_time() << endl;
         // LOG(INFO) << "Model5 multi-partitioning finished!" << endl;
     } else {
         total_time.start();
@@ -182,7 +192,7 @@ void Model5Partitioner::split() {
                     break;
                 }
                 // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
-                degree = adj_directed[vid].size();
+                degree = vertex_adjacent_edges[vid].size();
             }
 
             CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
@@ -212,10 +222,17 @@ void Model5Partitioner::split() {
         LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
 
     }
+    LOG(INFO) << "Assigned edges: " << assigned_edges;
+    LOG(INFO) << "Remaining edges: " << num_edges - assigned_edges;
+    // 能否修改为将剩余的边手动加入到最合适的分区？
     LOG(INFO) << "Start building the last full partition" << endl;
     current_partition = num_partitions - 1;
     // 把剩余的边放入最后一个分区
+    Timer t;
+    t.start();
     assign_remaining();
+    t.stop();
+    LOG(INFO) << "Partition " << current_partition << " time: " << t.get_time() << endl;
     LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
 
     CHECK_EQ(assigned_edges, num_edges);
@@ -228,6 +245,7 @@ void Model5Partitioner::sub_split(size_t index) {
     // LOG(INFO) << "Start sub_split " << index << endl;
     Timer t;
     t.start();
+    // LOG(INFO) << capacity * capacity_ratio;
     while (occupied[index] <= capacity * capacity_ratio) {
         vid_t degree, vid;
         // 尝试从当前分区所属的最小堆中获取顶点
@@ -264,9 +282,9 @@ void Model5Partitioner::sub_split(size_t index) {
         release_vertex(vid);
     }
     t.stop();
-    // LOG(INFO) << "End sub_split " << index << " time: " << t.get_time() << endl;
+    LOG(INFO) << "End sub_split " << index << " time: " << t.get_time() << endl;
     // 确保前面不会有误
-    // LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
+    LOG(INFO) << "Occupy Core " << index << " finished: " << occupied[index] << endl;
 }
 
 
@@ -301,7 +319,7 @@ bool Model5Partitioner::get_free_vertex(vid_t &vid) {
     //TODO 什么叫已经超出平衡范围
     //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
     while (count < num_vertices &&
-           (adj_directed[vid].size() == 0 || adj_directed[vid].size() > 2 * average_degree || is_cores[current_partition].get(vid))) {
+           (vertex_adjacent_edges[vid].size() == 0 || vertex_adjacent_edges[vid].size() > 2 * average_degree || is_cores[current_partition].get(vid))) {
         vid = (vid + ++count) % num_vertices;
     }
     if (count == num_vertices)

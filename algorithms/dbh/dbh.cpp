@@ -84,6 +84,7 @@ void DbhPartitioner::split() {
         vid_t vid = degrees[e.first] <= degrees[e.second] ? e.first : e.second;
         size_t partition = vid % num_partitions;
         occupied[partition]++;
+        assigned_edges++;
         is_mirrors[e.first].set_bit_unsync(partition);
         is_mirrors[e.second].set_bit_unsync(partition);
         ++part_degrees[e.first][partition];
