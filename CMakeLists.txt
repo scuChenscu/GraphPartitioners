@@ -24,10 +24,14 @@ add_library(SOURCE_FILES
         algorithms/ne/ne.cpp
         algorithms/model4/model4.cpp
         algorithms/model5/model5.cpp
+        algorithms/model6/model6.cpp
         algorithms/dbh/dbh.cpp
         algorithms/hdrf/hdrf.cpp
         algorithms/ldg/ldg.cpp
-        algorithms/fennel/fennel.cpp)
+        algorithms/fennel/fennel.cpp
+        algorithms/greedy/greedy.cpp
+        algorithms/rand/rand.cpp
+        )
 add_executable(GraphPartitioning main.cpp)
 target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
 

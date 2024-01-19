@@ -40,6 +40,9 @@ protected:
     vector<dense_bitset> is_mirrors;
     // TODO 需要一个结构来记录每个边所属的分区
 
+    uint64_t min_load = UINT64_MAX;
+    uint64_t max_load = 0;
+
     dense_bitset visited;
     vector<size_t> indices;
     vector<size_t> reverse_indices;
@@ -54,4 +57,10 @@ protected:
     void print_indices() override;
 
     void print_partition_edges();
+
+    void update_min_max_load(int max_p) {
+        auto &load = occupied[max_p];
+        if (load > max_load) max_load = load;
+        min_load = *min_element(occupied.begin(), occupied.end());
+    }
 };

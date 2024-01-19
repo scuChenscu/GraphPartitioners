@@ -38,7 +38,6 @@ protected:
     vid_t num_vertices;
     size_t num_edges;
     string graph_name;
-
     unordered_map<vid_t, set<vid_t>>& adjacency_list;
 
 
@@ -70,6 +69,8 @@ public:
         edge_ofstream.close();
         vertex_ofstream.close();
     }
+
+
 };
 
 

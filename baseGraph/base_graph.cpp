@@ -8,8 +8,11 @@
 #include "../algorithms/hdrf/hdrf.hpp"
 #include "../algorithms/ldg/ldg.hpp"
 #include "../algorithms/fennel/fennel.hpp"
+#include "../algorithms/greedy/greedy.hpp"
+#include "../algorithms/rand/rand.hpp"
 #include "../algorithms/model4/model4.hpp"
 #include "../algorithms/model5/model5.hpp"
+#include "../algorithms/model6/model6.hpp"
 
 using namespace std;
 
@@ -120,7 +123,7 @@ void BaseGraph::partition() {
             } else if (algorithm == "model5") {
                 // TODO 三个核心参数：cores、balance_ratio、capacity_ratio
                 if (SELF) {
-                    partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                    partitioner = new Model5Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,1);
                     partitioners.push_back(partitioner);
                     continue;
                 }
@@ -133,6 +136,9 @@ void BaseGraph::partition() {
                         }
                     }
                 }
+            } else if (algorithm == "model6") {
+                partitioner = new Model6Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
             } else if (algorithm == "dbh") {
                 partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partitions, memory_size);
                 partitioners.push_back(partitioner);
@@ -147,7 +153,14 @@ void BaseGraph::partition() {
                 partitioner = new FennelPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
                                                     isShuffle);
                 partitioners.push_back(partitioner);
-            } else {
+            } else if (algorithm == "greedy") {
+                partitioner = new GreedyPartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            } else if (algorithm == "rand") {
+                partitioner = new RandPartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            }
+            else {
                 LOG(ERROR) << "Unknown algorithm: " << algorithm;
                 continue;
             }
@@ -164,7 +177,7 @@ void BaseGraph::partition() {
 }
 
 void BaseGraph::re_index() {
-    LOG(INFO) << adjacency_list.size();
+    // LOG(INFO) << adjacency_list.size();
     queue<vid_t> v_queue;
     auto start = std::chrono::high_resolution_clock::now(); // 记录开始时间
     // 随机选择顶点，进行广度遍历，重新索引
