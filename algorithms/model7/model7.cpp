@@ -1,15 +1,15 @@
-#include "model6.hpp"
+#include "model7.hpp"
 
 using namespace std;
 
-Model6Partitioner::Model6Partitioner(BaseGraph& baseGraph,
+Model7Partitioner::Model7Partitioner(BaseGraph& baseGraph,
                                      const string &input,
                                      const string &algorithm,
                                      size_t num_partitions,
                                      double ours_balance_ratio,
                                      double ours_capacity_ratio,
                                      size_t cores) : EdgePartitioner(baseGraph, algorithm, num_partitions),
-                                                              input(input), gen(986) {
+                                                              input(input), gen(987) {
     config_output_files();
 
     this->cores = cores;
@@ -54,10 +54,12 @@ Model6Partitioner::Model6Partitioner(BaseGraph& baseGraph,
     part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
     balance_vertex_distribute.resize(num_vertices);
     // acquired_partition.resize(num_partitions, -1);
+
+    linkedlists.resize(num_partitions, LinkedList<vid_t, size_t>());
 }
 
 //最后一个子图就是剩下边组合而成
-void Model6Partitioner::assign_remaining() {
+void Model7Partitioner::assign_remaining() {
     auto &is_boundary = is_boundaries[num_partitions - 1];
     auto &is_core = is_cores[num_partitions - 1];
 
@@ -91,7 +93,7 @@ void Model6Partitioner::assign_remaining() {
     LOG(INFO) << "Rep: " << rep;
 }
 
-void Model6Partitioner::assign_master() {
+void Model7Partitioner::assign_master() {
     vector<vid_t> count_master(num_partitions, 0);
     vector<vid_t> quota(num_partitions, num_vertices);
     long long sum = num_partitions * num_vertices;
@@ -121,7 +123,7 @@ void Model6Partitioner::assign_master() {
     }
 }
 
-void Model6Partitioner::split() {
+void Model7Partitioner::split() {
     LOG(INFO) << "Build vertex adjacent edges" << endl;
     // 记录每个顶点的边数
     build_vertex_adjacent_edges();
@@ -130,15 +132,16 @@ void Model6Partitioner::split() {
 //    LOG(INFO) << "Build direction edge" << endl;
 //    adj_directed.build_directed(edges, reverse_indices);
 
-    min_heaps.resize(num_partitions, MinHeap<vid_t, vid_t>(num_vertices));
+    // min_heaps.resize(num_partitions, MinHeap<vid_t, vid_t>(num_vertices));
 
-    LOG(INFO) << "Start Model6 partitioning...";
+    LOG(INFO) << "Start Model7 partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "Model6"
+    ss << "Model7"
        << endl
-       << "去除BFS分块，使用K-way多线程来同时进行k个分区划分，最后将剩余的边使用HDRF来分配"
+       << "去除BFS分块，将最小堆改成从队列，即优先广度遍历引入新的顶点，不考虑顶点的度，直接按顺序访问"
+          "使用K-way多线程来同时进行k个分区划分，最后将剩余的边使用HDRF来分配"
        << "目标是提高NE算法的运行速度，同时保证RF尽可能低"
        << endl
        << "Balance Ratio: " << balance_ratio
@@ -152,7 +155,7 @@ void Model6Partitioner::split() {
     if (cores > 1) {
         thread threads[cores];
         for (int i = 0; i < cores; ++i) {
-            threads[i] = thread(&Model6Partitioner::sub_split, this, i);
+            threads[i] = thread(&Model7Partitioner::sub_split, this, i);
         }
         total_time.start();
         Timer t;
@@ -161,8 +164,8 @@ void Model6Partitioner::split() {
             threads[i].join();
         }
         t.stop();
-        // LOG(INFO) << "Model6 multi-partitioning time: " << t.get_time() << endl;
-        // LOG(INFO) << "Model6 multi-partitioning finished!" << endl;
+        // LOG(INFO) << "Model7 multi-partitioning time: " << t.get_time() << endl;
+        // LOG(INFO) << "Model7 multi-partitioning finished!" << endl;
     } else {
         total_time.start();
         LOG(INFO) << "Cores: " << cores << " , less than 1, use single thread" << endl;
@@ -268,7 +271,7 @@ void Model6Partitioner::split() {
 }
 
 // TODO 这里要注意不能用current_partition，current_partition是全局变量，只能用在后续建立完整分区
-void Model6Partitioner::sub_split(size_t index) {
+void Model7Partitioner::sub_split(size_t index) {
     // LOG(INFO) << "Start sub_split " << index << endl;
     Timer t;
     t.start();
@@ -276,13 +279,16 @@ void Model6Partitioner::sub_split(size_t index) {
     while (occupied[index] <= capacity * capacity_ratio) {
         vid_t degree, vid;
         // 尝试从当前分区所属的最小堆中获取顶点
-        if (!min_heaps[index].get_min(degree, vid)) { // 当S\C为空时，从V\C中随机选择顶点
+        // 这里就从链表首个队列获取顶点
+        if (linkedlists[index].isEmpty()) { // 当S\C为空时，从V\C中随机选择顶点
             if (!sub_get_free_vertex(vid, index)) { // 当V\C已经没有顶点，结束算法
                 break;
             }
             degree = vertex_adjacent_edges[vid].size();
         } else {
-            min_heaps[index].remove(vid);
+            pair<vid_t, size_t> pair = linkedlists[index].removeFirst();
+            vid = pair.first;
+            degree = pair.second;
         }
         CHECK(!is_cores[index].get(vid)) << "add " << vid << " to core again";
         is_cores[index].set_bit_unsync(vid);
@@ -318,7 +324,7 @@ void Model6Partitioner::sub_split(size_t index) {
 
 
 
-bool Model6Partitioner::sub_get_free_vertex(vid_t &vid, vid_t index) {
+bool Model7Partitioner::sub_get_free_vertex(vid_t &vid, vid_t index) {
     vid_t min = index * num_vertices_each_cores;
     vid_t idx = sub_dis(gen);
 
@@ -342,7 +348,7 @@ bool Model6Partitioner::sub_get_free_vertex(vid_t &vid, vid_t index) {
     return false;
 }
 
-bool Model6Partitioner::get_free_vertex(vid_t &vid) {
+bool Model7Partitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
     vid = dis(gen);
     vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
@@ -357,7 +363,7 @@ bool Model6Partitioner::get_free_vertex(vid_t &vid) {
     return true;
 }
 
-void Model6Partitioner::sub_add_boundary(vid_t vid, size_t index) {
+void Model7Partitioner::sub_add_boundary(vid_t vid, size_t index) {
     auto &is_core = is_cores[index];
     auto &is_boundary = is_boundaries[index];
     // CHECK(!is_boundary.get(vid)) << vid << " is in boundary";
@@ -368,7 +374,8 @@ void Model6Partitioner::sub_add_boundary(vid_t vid, size_t index) {
 
     size_t degree = vertex_adjacent_edges[vid].size();
     CHECK_GE(degree, 0) << "Degree is 0";
-    min_heaps[index].insert(degree, vid);
+    // min_heaps[index].insert(degree, vid);
+    linkedlists[index].insert(vid, degree);
 
     auto iterator = vertex_adjacent_edges[vid].begin();
     while (iterator != vertex_adjacent_edges[vid].end()) {
@@ -378,15 +385,23 @@ void Model6Partitioner::sub_add_boundary(vid_t vid, size_t index) {
             vid_t neighbor = edge.first == vid ? edge.second : edge.first;
             if (is_core.get(neighbor) && occupied[index] < capacity * capacity_ratio) {
                 assign_edge(index, edge.first, edge.second);
-                min_heaps[index].decrease_key(vid);
+                // min_heaps[index].decrease_key(vid);
+                linkedlists[index].modifyValue(vid, --degree);
                 vertex_adjacent_edges[vid].erase(iterator++);
                 edge.remove();
                 edge.set_partition(index);
                 // vertex_adjacent_edges[neighbor].erase(e_id);
             } else if (is_boundary.get(neighbor) && occupied[index] < capacity * capacity_ratio) {
                 assign_edge(index, edge.first, edge.second);
-                min_heaps[index].decrease_key(vid);
-                min_heaps[index].decrease_key(neighbor);
+                // min_heaps[index].decrease_key(vid);
+                linkedlists[index].modifyValue(vid, degree - 1);
+                // min_heaps[index].decrease_key(neighbor);
+                size_t neighbor_degree = linkedlists[index].getValueByKey(neighbor);
+                if (neighbor_degree > 1) {
+                    linkedlists[index].modifyValue(neighbor, neighbor_degree - 1);
+                } else {
+                    linkedlists[index].removeByKey(neighbor);
+                }
                 vertex_adjacent_edges[vid].erase(iterator++);
                 vertex_adjacent_edges[neighbor].erase(e_id);
                 edge.remove();
@@ -401,7 +416,7 @@ void Model6Partitioner::sub_add_boundary(vid_t vid, size_t index) {
 }
 
 
-void Model6Partitioner::add_boundary(vid_t vid) {
+void Model7Partitioner::add_boundary(vid_t vid) {
     // 获取到当前分区的核心集和边界集
     auto &is_core = is_cores[current_partition];
     auto &is_boundary = is_boundaries[current_partition];
@@ -445,7 +460,7 @@ void Model6Partitioner::add_boundary(vid_t vid) {
     }
 }
 
-void Model6Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
+void Model7Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
 
     // edge_partition[e_id] = index;
     // save_edge(from, to, num_partitions);
@@ -467,7 +482,7 @@ void Model6Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
 //    degrees[to]--;
 }
 
-size_t Model6Partitioner::check_edge(const edge_t *e) {
+size_t Model7Partitioner::check_edge(const edge_t *e) {
     rep (i, num_partitions) {
         auto &is_boundary = is_boundaries[i];
         if (is_boundary.get(e->first) && is_boundary.get(e->second) &&
@@ -492,7 +507,7 @@ size_t Model6Partitioner::check_edge(const edge_t *e) {
     return num_partitions;
 }
 
-void Model6Partitioner::build_vertex_adjacent_edges() {
+void Model7Partitioner::build_vertex_adjacent_edges() {
     // 遍历edges
     for (size_t i = 0; i < edges.size(); i++) {
         if (edges[i].valid()) {
@@ -504,7 +519,7 @@ void Model6Partitioner::build_vertex_adjacent_edges() {
     }
 }
 
-//void Model6Partitioner::calculate_replication_factor() {
+//void Model7Partitioner::calculate_replication_factor() {
 //    LOG(INFO) << "Calculating replication factor..." << endl;
 //    // 对每个分区的边界集求和
 //    for (size_t i = 0; i < reverse_is_mirrors.size(); i++) {

@@ -20,12 +20,12 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {      "rand" };
+static const string algorithms[] = {      "hdrf" };
 // com-amazon.graph不是强连通图，废弃
 static  const string graph_suffix = "web-Google.graph";
 static const bool isShuffle = false;
 const static string input = "../graphs/medium-scale";
-const static bool REINDEX = true;
+const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
 static const double OURS_BALANCE_RATIO = 1.00;

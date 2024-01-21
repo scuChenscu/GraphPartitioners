@@ -13,6 +13,7 @@
 #include "../algorithms/model4/model4.hpp"
 #include "../algorithms/model5/model5.hpp"
 #include "../algorithms/model6/model6.hpp"
+#include "../algorithms/model7/model7.hpp"
 
 using namespace std;
 
@@ -62,7 +63,9 @@ BaseGraph::BaseGraph(const string& graph_name) {
         LOG(INFO) << "re_index" << endl;
         re_index();
     } else {
-
+        for (int i = 0; i < num_vertices;i++) {
+            indices[i] = i;
+        }
     }
 
 
@@ -139,7 +142,12 @@ void BaseGraph::partition() {
             } else if (algorithm == "model6") {
                 partitioner = new Model6Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
                 partitioners.push_back(partitioner);
-            } else if (algorithm == "dbh") {
+            }
+            else if (algorithm == "model7") {
+                partitioner = new Model7Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "dbh") {
                 partitioner = new DbhPartitioner(*this, graph_name, algorithm, num_partitions, memory_size);
                 partitioners.push_back(partitioner);
             } else if (algorithm == "hdrf") {
