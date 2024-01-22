@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <atomic>
 #include "partitioner.hpp"
 #include "../baseGraph/base_graph.hpp"
 #include "../utils/dense_bitset.hpp"

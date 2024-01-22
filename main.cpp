@@ -5,15 +5,16 @@
 //filename "name of the file to store edge list of a graph."
 //shuffle "for streaming graph, influencing the partitioning quality"
 #pragma once
-
-#include <filesystem>
 #include <iostream>
+#include <csignal>
 #include "converter/conversions.hpp"
 #include "utils/util.hpp"
 #include "baseGraph/base_graph.hpp"
-
-using namespace std;
+#include <filesystem>
 namespace fs = filesystem;
+using namespace std;
+// #include <experimental/filesystem>
+// namespace fs = experimental::filesystem;
 // 原始图数据的路径
 
 void signalHandler(int signum) {
@@ -47,8 +48,11 @@ int main() {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
             string graph_name = entry.path().string();
+            string name = graph_name.substr(0, graph_name.size() - 6);
             // 判断是否为.graph类型文件
-            if (!graph_name.ends_with(graph_suffix)) continue;
+            int len = graph_suffix.length();
+            string substring = graph_name.substr(graph_name.size() - len, len);
+            if (substring != graph_suffix) continue;
             LOG(INFO) << "Convert " << graph_name << " to binary edgelist" << endl;
             auto *converter = new Converter(graph_name);
             convert(graph_name, converter, memory_size);

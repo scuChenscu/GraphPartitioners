@@ -14,6 +14,7 @@
 #include "../algorithms/model5/model5.hpp"
 #include "../algorithms/model6/model6.hpp"
 #include "../algorithms/model7/model7.hpp"
+#include "../algorithms/model8/model8.hpp"
 
 using namespace std;
 
@@ -81,7 +82,7 @@ void BaseGraph::construct_adjacency_list() {
         true_vids.set_bit_unsync(edge.first);
         true_vids.set_bit_unsync(edge.second);
 
-        if (adjacency_list.contains(edge.first)) {
+        if (adjacency_list.count(edge.first) > 0 ) {
             // LOG(INFO) << edge.first;
             adjacency_list.find(edge.first)->second.insert(edge.second);
         } else {
@@ -89,7 +90,7 @@ void BaseGraph::construct_adjacency_list() {
             set.insert(edge.second);
             adjacency_list[edge.first] = set;
         }
-        if (adjacency_list.contains(edge.second)) {
+        if (adjacency_list.count(edge.second)) {
             // LOG(INFO) << edge.second;
             adjacency_list.find(edge.second)->second.insert(edge.first);
         } else {
@@ -145,6 +146,10 @@ void BaseGraph::partition() {
             }
             else if (algorithm == "model7") {
                 partitioner = new Model7Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "model8") {
+                partitioner = new Model8Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "dbh") {
@@ -207,7 +212,7 @@ void BaseGraph::re_index() {
         indices[index++] = v;
 
         // 获取v的邻居顶点
-        if (!adjacency_list.contains(v)) continue;
+        if (!adjacency_list.count(v)) continue;
         // LOG(INFO) << v;
         set <vid_t> neighbor_set = adjacency_list.find(v)->second;
         // 将neighbor_set加入v_queue和v_set中

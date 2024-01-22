@@ -1,3 +1,4 @@
+#include <climits>
 #include "greedy.hpp"
 
 GreedyPartitioner::GreedyPartitioner(BaseGraph& baseGraph,

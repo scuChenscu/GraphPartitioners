@@ -1,18 +1,27 @@
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pthread -lstdc++fs")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.10)
 project(GraphPartitioning)
+#
+#set(GLOG /opt/homebrew/Cellar/glog/0.6.0)
+#set(GFLAGS /opt/homebrew/Cellar/gflags/2.2.2)
+#set(BOOST /opt/homebrew/Cellar/boost/1.83.0)
 
-set(GLOG /opt/homebrew/Cellar/glog/0.6.0)
-set(GFLAGS /opt/homebrew/Cellar/gflags/2.2.2)
-set(BOOST /opt/homebrew/Cellar/boost/1.83.0)
 
-include_directories(${GLOG}/include/ ${GFLAGS}/include/ ${BOOST}/include/)
-link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
+#include_directories(${GLOG}/include/ ${GFLAGS}/include/ ${BOOST}/include/)
+#link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
+
+
+# 设置 GLOG 的头文件路径
+include_directories("/usr/include/glog")
+
+# 设置 GLOG 的库文件路径
+link_directories("/usr/lib/x86_64-linux-gnu")
+
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
@@ -35,5 +44,5 @@ add_library(SOURCE_FILES
         algorithms/rand/rand.cpp
         )
 add_executable(GraphPartitioning main.cpp)
-target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
-
+#target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
+target_link_libraries(GraphPartitioning PRIVATE glog stdc++fs SOURCE_FILES )

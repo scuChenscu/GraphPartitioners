@@ -66,7 +66,7 @@ void LdgPartitioner::addNeighbors(edge_t &edge) {
 }
 
 size_t LdgPartitioner::intersection(vid_t vid, size_t partition) {
-    if (!adjacency_list.contains(vid)) return 0;
+    if (!adjacency_list.count(vid)) return 0;
     int count = 0;
     for (auto neighbor : adjacency_list.find(vid)->second) {
         if (partition_vertices[partition].get(neighbor)) {

@@ -2,3 +2,6 @@
 cmake-build-default
 graphs
 cmake-build*
+build
+.DS_Store
+algorithms/.DS_Store

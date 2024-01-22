@@ -8,6 +8,7 @@
 #include <thread>
 #include <random>
 #include <unordered_set>
+#include <unordered_map>
 #include "../utils/util.hpp"
 #include "../utils/graph.hpp"
 #include "../utils//dense_bitset.hpp"
@@ -20,7 +21,7 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {      "hdrf" };
+static const string algorithms[] = {      "model8", "model6" };
 // com-amazon.graph不是强连通图，废弃
 static  const string graph_suffix = "web-Google.graph";
 static const bool isShuffle = false;
