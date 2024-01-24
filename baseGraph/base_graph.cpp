@@ -15,7 +15,8 @@
 #include "../algorithms/model6/model6.hpp"
 #include "../algorithms/model7/model7.hpp"
 #include "../algorithms/model8/model8.hpp"
-
+#include "../algorithms/model9/model9.hpp"
+#include "../algorithms/model10/model10.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
@@ -150,6 +151,14 @@ void BaseGraph::partition() {
             }
             else if (algorithm == "model8") {
                 partitioner = new Model8Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "model9") {
+                partitioner = new Model9Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "model10") {
+                partitioner = new Model10Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "dbh") {
