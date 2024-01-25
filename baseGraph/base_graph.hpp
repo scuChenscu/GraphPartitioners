@@ -21,7 +21,7 @@ static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {     "hdrf","model5","model6",};
+static const string algorithms[] = {      "model9"};
 // com-amazon.graph不是强连通图，废弃
 static  const string graph_suffix = "soc-pokec-relationships.graph";
 static const bool isShuffle = false;
@@ -30,7 +30,7 @@ const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
 static const double OURS_BALANCE_RATIO = 1.00;
-static const double OURS_CAPACITY_RATIO = 1.00;
+static const double OURS_CAPACITY_RATIO = 0.8;
 static const size_t CORES = thread::hardware_concurrency();
 //static const size_t CORES = 1;
 //static const size_t MAX_CORES = thread::hardware_concurrency();
