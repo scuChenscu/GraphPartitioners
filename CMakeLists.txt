@@ -22,6 +22,7 @@ add_library(SOURCE_FILES
         partitioner/vertexPartitioner.cpp
         utils/graph.cpp
         algorithms/ne/ne.cpp
+        algorithms/dne/dne.cpp
         algorithms/model4/model4.cpp
         algorithms/model5/model5.cpp
         algorithms/model6/model6.cpp

@@ -17,6 +17,7 @@
 #include "../algorithms/model8/model8.hpp"
 #include "../algorithms/model9/model9.hpp"
 #include "../algorithms/model10/model10.hpp"
+#include "../algorithms/dne/dne.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
@@ -159,6 +160,10 @@ void BaseGraph::partition() {
             }
             else if (algorithm == "model10") {
                 partitioner = new Model10Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "dne") {
+                partitioner = new DnePartitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "dbh") {

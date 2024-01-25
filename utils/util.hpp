@@ -7,6 +7,7 @@
 #include <glog/logging.h>
 #include <sstream>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 
@@ -17,15 +18,18 @@ typedef uint32_t vid_t;
 const vid_t INVALID_VID = -1;
 
 struct edge_t {
+    // TODO 会导致edge_t大小不一致
     vid_t first, second;
+
 
     edge_t() : first(0), second(0) {}
 
     edge_t(vid_t first, vid_t second) : first(first), second(second) {}
 
-    [[nodiscard]] bool valid() const { return first != INVALID_VID; }
+    [[nodiscard]] bool valid() const { return  first != INVALID_VID;}
 
-    void remove() { first = INVALID_VID; }
+    void remove() { first = INVALID_VID;}
+    // 并发移除
 
     void set_partition(size_t partition) {
         first = INVALID_VID;
