@@ -15,17 +15,17 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 4,  };
+static const size_t partitions[] = { 128 };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {      "dne", };
+static const string algorithms[] = {      "model11" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = "mdual.graph";
+static  const string graph_suffix = ".graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/small-scale";
+const static string input = "../graphs/large-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
@@ -58,7 +58,11 @@ public:
     graph_t adj_out;
     graph_t adj_in;
     // 存储每个顶点的度数
-    vector<size_t> degrees;
+    vector<unsigned long> degrees;
+    size_t max_degree = 0;
+    size_t min_degree = UINT64_MAX;
+    double avg_degree;
+    long long total_degree = 0;
     dense_bitset true_vids;
 
 

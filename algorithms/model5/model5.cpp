@@ -52,6 +52,10 @@ Model5Partitioner::Model5Partitioner(BaseGraph& baseGraph,
 
     part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
     balance_vertex_distribute.resize(num_vertices);
+
+    rounds.assign(num_vertices, 0);
+    start.assign(num_vertices, -1);
+    end.assign(num_vertices, -1);
 }
 
 //最后一个子图就是剩下边组合而成
@@ -165,6 +169,20 @@ void Model5Partitioner::split() {
         total_time.start();
         LOG(INFO) << "Cores: " << cores << " , less than 1, use single thread" << endl;
     }
+    int sd = 0;
+    for (int i = 0; i < num_vertices; i++) {
+        sd += degrees[i];
+    }
+
+    int over_ad = 0;
+    double ad = (double)sd / num_vertices;
+    for (int i = 0; i < num_vertices; i++) {
+        if (degrees[i] > ad) {
+            over_ad++;
+        }
+    }
+
+    LOG(INFO) << "ad: " <<  ad << " over_ad: " << over_ad  << " ratio: " << (double )over_ad / num_vertices << endl;
 
     LOG(INFO) << "Start building the first num_partitions - 1 full partition" << endl;
 
@@ -173,12 +191,18 @@ void Model5Partitioner::split() {
         t.start();
         // min_heap = min_heaps[current_partition];
         // LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heaps[current_partition].size() << endl;
+        int round = 0;
+        vector<int> cur_round(num_vertices, -1);
+        vector<int> cur_start(num_vertices, -1);
+        vector<int> cur_end(num_vertices, -1);
         while (occupied[current_partition] < capacity * balance_ratio) {
+            round++;
             vid_t degree, vid;
             bool has_min = false;
             while (min_heaps[current_partition].size() > 0) {
                 min_heaps[current_partition].get_min(degree, vid);
                 min_heaps[current_partition].remove(vid);
+                cur_end[vid] = round;
                 if (!vertex_adjacent_edges[vid].empty()) {
                     // 更新degree
                     // CHECK_EQ(degree, vertex_adjacent_edges[vid].size());
@@ -207,6 +231,7 @@ void Model5Partitioner::split() {
                 if (edge.valid()) {
                     vid_t& neighbor = edge.first == vid ? edge.second : edge.first;
                         if (edge.valid()) {
+                            cur_start[neighbor] = round;
                             add_boundary(neighbor);
                             if (!edge.valid()) {
                                 vertex_adjacent_edges[vid].erase(iterator++);
@@ -220,6 +245,23 @@ void Model5Partitioner::split() {
         t.stop();
         LOG(INFO) << "Partition " << current_partition << " time: " << t.get_time() << endl;
         LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
+        // 统计每个分区的顶点在存留轮次
+        // 写入到文件，一个是被加入到核心集的顶点的轮次，一个是未加入到核心集的顶点
+        //
+        LOG(INFO) << "Partition " << current_partition << " round: " << round << endl;
+        for(int i = 0;i < num_vertices; i++) {
+            if (cur_start[i] != -1) {
+                if (cur_end[i] != -1) {
+                    cur_round[i] = cur_end[i] - cur_start[i];
+                    // 写入 d r
+                    // LOG(INFO)  << "Degree " << degrees[i] << " Round " << cur_round[i] << endl;
+                } else {
+                    // 写入 d -
+                    // LOG(INFO)  << "Degree " << degrees[i] << " Round Start: " << cur_start[i] << endl;
+                }
+            }
+        }
+
 
     }
     LOG(INFO) << "Assigned edges: " << assigned_edges;
@@ -231,6 +273,29 @@ void Model5Partitioner::split() {
     Timer t;
     t.start();
     assign_remaining();
+    for (int i = 0; i < num_partitions; ++i) {
+        LOG(INFO) << "Partition " << i << ", core vertices: " << is_cores[i].popcount() << ", boundary vertices: " << is_boundaries[i].popcount() << ", S\\C: " << is_boundaries[i].popcount() - is_cores[i].popcount()<< endl;
+        // 计算顶点的平均度数
+        dense_bitset is_boundary = is_boundaries[i];
+        dense_bitset is_core = is_cores[i];
+        int c = 0;
+        int s = 0;
+        int cd = 0;
+        int sd = 0;
+        for (int index = 0; index < num_vertices; index++) {
+            if (is_core.get(index)) {
+                c++;
+                cd += degrees[index];
+            } else if (is_boundary.get(index)) {
+                s++;
+                sd += degrees[index];
+            }
+        }
+        LOG(INFO) << "Partition " << i << ", acd: " << cd/c << ", asd: " << sd/s << endl;
+
+    }
+
+
     t.stop();
     LOG(INFO) << "Partition " << current_partition << " time: " << t.get_time() << endl;
     LOG(INFO) << "End partition " << current_partition  << " edge count: " << occupied[current_partition] << endl;
@@ -433,8 +498,8 @@ void Model5Partitioner::assign_edge(size_t index, vid_t from, vid_t to) {
     // LOG(INFO) << "Assigned edges: " << assigned_edges << endl;
     occupied[index]++;
     // TODO 这两个不太重要
-    degrees[from]--;
-    degrees[to]--;
+//    degrees[from]--;
+//    degrees[to]--;
 }
 
 size_t Model5Partitioner::check_edge(const edge_t *e) {

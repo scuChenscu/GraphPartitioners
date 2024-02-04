@@ -56,6 +56,10 @@ private:
     // is_cores和is_boundaries是每个分区独立的dense_bitset
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
+    // 记录每个顶点从V加入到S；然后从S移入到C经历的过程
+    vector<int> rounds;
+    vector<int> start;
+    vector<int> end;
 
     vector<dense_bitset> reverse_is_mirrors;
 

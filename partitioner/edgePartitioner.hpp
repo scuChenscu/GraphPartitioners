@@ -30,6 +30,9 @@ protected:
     // 分区边负载上限调节因子
     double balance_ratio;
 
+    size_t max_degree = 0;
+    size_t min_degree = UINT16_MAX;
+    size_t avg_degree;
 
     // 已经分配的边数
     atomic<size_t> assigned_edges;

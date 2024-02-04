@@ -17,6 +17,7 @@
 #include "../algorithms/model8/model8.hpp"
 #include "../algorithms/model9/model9.hpp"
 #include "../algorithms/model10/model10.hpp"
+#include "../algorithms/model11/model11.hpp"
 #include "../algorithms/dne/dne.hpp"
 using namespace std;
 
@@ -83,7 +84,7 @@ void BaseGraph::construct_adjacency_list() {
         degrees[edge.second]++;
         true_vids.set_bit_unsync(edge.first);
         true_vids.set_bit_unsync(edge.second);
-
+        continue;
         if (adjacency_list.count(edge.first) > 0 ) {
             // LOG(INFO) << edge.first;
             adjacency_list.find(edge.first)->second.insert(edge.second);
@@ -101,6 +102,29 @@ void BaseGraph::construct_adjacency_list() {
             adjacency_list[edge.second] = set;
         }
     }
+    // 计算顶点度数
+    for (int i = 0; i < num_vertices; i++) {
+        if (degrees[i] > max_degree) {
+            max_degree = degrees[i];
+        } else if (degrees[i] < min_degree) {
+            min_degree = degrees[i];
+        }
+        total_degree += degrees[i];
+    }
+    LOG(INFO) << "total degree: " << total_degree << " , num_vertices: " << num_vertices << endl;
+    avg_degree = (double)total_degree / (double )num_vertices;
+
+    // 计算大于平均度数的有多少
+
+    int over_ad = 0;
+    for (int i = 0; i < num_vertices; i++) {
+        if ((double)degrees[i] > avg_degree) {
+            over_ad++;
+        }
+    }
+
+    LOG(INFO) << "avg_degree: " <<  avg_degree << " over_ad: " << over_ad  << " ratio: " << (double)over_ad / num_vertices << endl;
+
 }
 
 void BaseGraph::partition() {
@@ -160,6 +184,10 @@ void BaseGraph::partition() {
             }
             else if (algorithm == "model10") {
                 partitioner = new Model10Partitioner(*this, graph_name, algorithm, num_partitions,OURS_BALANCE_RATIO, OURS_CAPACITY_RATIO,CORES);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "model11") {
+                partitioner = new Model11Partitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "dne") {

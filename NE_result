@@ -1,0 +1,89 @@
+Time: 2024/02/04 19:32:06 | Input: ../graphs/large-scale
+Graph Name: ../graphs/large-scale/com-orkut.graph
+NE
+BALANCE RATIO:1
+Cost Time: 196531.36800 | Replication Factor: 3.06995 | Alpha: 1.00000 | Replicas: 9432226 | Partition: 64 | Max Edge: 1831023 | Min Edge: 1830911 | Avg Edge: 1831016 | Edges: 117185083 | Vertices: 3072627 | True Vertices: 3072441 | Avg Degree: 76 | Min Degree: 0 | Max Degree: 33313
+Graph Name: ../graphs/large-scale/loc-brightkite_edges.graph
+NE
+BALANCE RATIO:1
+Cost Time: 404.81900 | Replication Factor: 1.58468 | Alpha: 1.00479 | Replicas: 92273 | Partition: 64 | Max Edge: 6722 | Min Edge: 6436 | Avg Edge: 6689 | Edges: 428156 | Vertices: 58228 | True Vertices: 58228 | Avg Degree: 14 | Min Degree: 2 | Max Degree: 2268
+Graph Name: ../graphs/large-scale/wiki-topcats.graph
+NE
+BALANCE RATIO:1
+Cost Time: 43704.12000 | Replication Factor: 2.02537 | Alpha: 1.00003 | Replicas: 3628426 | Partition: 64 | Max Edge: 445453 | Min Edge: 445330 | Avg Edge: 445439 | Edges: 28508141 | Vertices: 1791489 | True Vertices: 1791489 | Avg Degree: 31 | Min Degree: 2 | Max Degree: 238607
+Graph Name: ../graphs/large-scale/soc-pokec-relationships.graph
+NE
+BALANCE RATIO:1
+Cost Time: 50635.00000 | Replication Factor: 2.70379 | Alpha: 1.00002 | Replicas: 4414749 | Partition: 64 | Max Edge: 478486 | Min Edge: 478308 | Avg Edge: 478477 | Edges: 30622564 | Vertices: 1632804 | True Vertices: 1632803 | Avg Degree: 37 | Min Degree: 0 | Max Degree: 20518
+Graph Name: ../graphs/large-scale/higgs-social_network.graph
+NE
+BALANCE RATIO:1
+Cost Time: 28493.06500 | Replication Factor: 2.46956 | Alpha: 1.00003 | Replicas: 1127666 | Partition: 64 | Max Edge: 232130 | Min Edge: 231948 | Avg Edge: 232122 | Edges: 14855819 | Vertices: 456627 | True Vertices: 456626 | Avg Degree: 65 | Min Degree: 0 | Max Degree: 51388
+Graph Name: ../graphs/large-scale/as-skitter.graph
+NE
+BALANCE RATIO:1
+Cost Time: 12743.79100 | Replication Factor: 1.26110 | Alpha: 1.00010 | Replicas: 2139355 | Partition: 64 | Max Edge: 173382 | Min Edge: 173056 | Avg Edge: 173364 | Edges: 11095298 | Vertices: 1696415 | True Vertices: 1696415 | Avg Degree: 13 | Min Degree: 1 | Max Degree: 35455
+Graph Name: ../graphs/large-scale/com-lj.graph
+NE
+BALANCE RATIO:1
+Cost Time: 48329.46800 | Replication Factor: 1.73123 | Alpha: 1.00003 | Replicas: 6921386 | Partition: 64 | Max Edge: 541909 | Min Edge: 541755 | Avg Edge: 541893 | Edges: 34681189 | Vertices: 4036538 | True Vertices: 3997962 | Avg Degree: 17 | Min Degree: 0 | Max Degree: 14815
+==============================================================================================================================================
+Time: 2024/02/04 21:39:45 | Input: ../graphs/large-scale
+Graph Name: ../graphs/large-scale/com-orkut.graph
+NE
+BALANCE RATIO:1
+Cost Time: 122624.79300 | Replication Factor: 2.50628 | Alpha: 1.00000 | Replicas: 7700394 | Partition: 32 | Max Edge: 3662039 | Min Edge: 3661985 | Avg Edge: 3662033 | Edges: 117185083 | Vertices: 3072627 | True Vertices: 3072441 | Avg Degree: 76 | Min Degree: 0 | Max Degree: 33313
+Graph Name: ../graphs/large-scale/loc-brightkite_edges.graph
+NE
+BALANCE RATIO:1
+Cost Time: 267.19100 | Replication Factor: 1.48219 | Alpha: 1.00068 | Replicas: 86305 | Partition: 32 | Max Edge: 13389 | Min Edge: 13288 | Avg Edge: 13379 | Edges: 428156 | Vertices: 58228 | True Vertices: 58228 | Avg Degree: 14 | Min Degree: 2 | Max Degree: 2268
+Graph Name: ../graphs/large-scale/wiki-topcats.graph
+NE
+BALANCE RATIO:1
+Cost Time: 28203.78800 | Replication Factor: 1.78419 | Alpha: 1.00001 | Replicas: 3196358 | Partition: 32 | Max Edge: 890884 | Min Edge: 890824 | Avg Edge: 890879 | Edges: 28508141 | Vertices: 1791489 | True Vertices: 1791489 | Avg Degree: 31 | Min Degree: 2 | Max Degree: 238607
+Graph Name: ../graphs/large-scale/soc-pokec-relationships.graph
+NE
+BALANCE RATIO:1
+Cost Time: 32341.43100 | Replication Factor: 2.31324 | Alpha: 1.00001 | Replicas: 3777064 | Partition: 32 | Max Edge: 956960 | Min Edge: 956880 | Avg Edge: 956955 | Edges: 30622564 | Vertices: 1632804 | True Vertices: 1632803 | Avg Degree: 37 | Min Degree: 0 | Max Degree: 20518
+Graph Name: ../graphs/large-scale/higgs-social_network.graph
+NE
+BALANCE RATIO:1
+Cost Time: 17011.07400 | Replication Factor: 2.04637 | Alpha: 1.00001 | Replicas: 934424 | Partition: 32 | Max Edge: 464249 | Min Edge: 464166 | Avg Edge: 464244 | Edges: 14855819 | Vertices: 456627 | True Vertices: 456626 | Avg Degree: 65 | Min Degree: 0 | Max Degree: 51388
+Graph Name: ../graphs/large-scale/as-skitter.graph
+NE
+BALANCE RATIO:1
+Cost Time: 8284.09200 | Replication Factor: 1.21437 | Alpha: 1.00015 | Replicas: 2060081 | Partition: 32 | Max Edge: 346779 | Min Edge: 346532 | Avg Edge: 346728 | Edges: 11095298 | Vertices: 1696415 | True Vertices: 1696415 | Avg Degree: 13 | Min Degree: 1 | Max Degree: 35455
+Graph Name: ../graphs/large-scale/com-lj.graph
+NE
+BALANCE RATIO:1
+Cost Time: 32646.20400 | Replication Factor: 1.56763 | Alpha: 1.00001 | Replicas: 6267333 | Partition: 32 | Max Edge: 1083795 | Min Edge: 1083707 | Avg Edge: 1083787 | Edges: 34681189 | Vertices: 4036538 | True Vertices: 3997962 | Avg Degree: 17 | Min Degree: 0 | Max Degree: 14815
+==============================================================================================================================================
+Time: 2024/02/04 22:27:18 | Input: ../graphs/large-scale
+Graph Name: ../graphs/large-scale/com-orkut.graph
+NE
+BALANCE RATIO:1
+Cost Time: 320370.86100 | Replication Factor: 3.75668 | Alpha: 1.00001 | Replicas: 11542180 | Partition: 128 | Max Edge: 915516 | Min Edge: 915202 | Avg Edge: 915508 | Edges: 117185083 | Vertices: 3072627 | True Vertices: 3072441 | Avg Degree: 76 | Min Degree: 0 | Max Degree: 33313
+Graph Name: ../graphs/large-scale/loc-brightkite_edges.graph
+NE
+BALANCE RATIO:1
+Cost Time: 736.64600 | Replication Factor: 1.70171 | Alpha: 1.02542 | Replicas: 99087 | Partition: 128 | Max Edge: 3430 | Min Edge: 2780 | Avg Edge: 3344 | Edges: 428156 | Vertices: 58228 | True Vertices: 58228 | Avg Degree: 14 | Min Degree: 2 | Max Degree: 2268
+Graph Name: ../graphs/large-scale/wiki-topcats.graph
+NE
+BALANCE RATIO:1
+Cost Time: 79365.95500 | Replication Factor: 2.33790 | Alpha: 1.00033 | Replicas: 4188320 | Partition: 128 | Max Edge: 222793 | Min Edge: 222360 | Avg Edge: 222719 | Edges: 28508141 | Vertices: 1791489 | True Vertices: 1791489 | Avg Degree: 31 | Min Degree: 2 | Max Degree: 238607
+Graph Name: ../graphs/large-scale/soc-pokec-relationships.graph
+NE
+BALANCE RATIO:1
+Cost Time: 93998.85000 | Replication Factor: 3.15500 | Alpha: 1.00003 | Replicas: 5151486 | Partition: 128 | Max Edge: 239246 | Min Edge: 238921 | Avg Edge: 239238 | Edges: 30622564 | Vertices: 1632804 | True Vertices: 1632803 | Avg Degree: 37 | Min Degree: 0 | Max Degree: 20518
+Graph Name: ../graphs/large-scale/higgs-social_network.graph
+NE
+BALANCE RATIO:1
+Cost Time: 56610.62100 | Replication Factor: 3.02111 | Alpha: 1.00009 | Replicas: 1379517 | Partition: 128 | Max Edge: 116071 | Min Edge: 115633 | Avg Edge: 116061 | Edges: 14855819 | Vertices: 456627 | True Vertices: 456626 | Avg Degree: 65 | Min Degree: 0 | Max Degree: 51388
+Graph Name: ../graphs/large-scale/as-skitter.graph
+NE
+BALANCE RATIO:1
+Cost Time: 23110.04500 | Replication Factor: 1.30888 | Alpha: 1.00148 | Replicas: 2220397 | Partition: 128 | Max Edge: 86810 | Min Edge: 85945 | Avg Edge: 86682 | Edges: 11095298 | Vertices: 1696415 | True Vertices: 1696415 | Avg Degree: 13 | Min Degree: 1 | Max Degree: 35455
+Graph Name: ../graphs/large-scale/com-lj.graph
+NE
+BALANCE RATIO:1
+Cost Time: 88490.50200 | Replication Factor: 1.90578 | Alpha: 1.00014 | Replicas: 7619227 | Partition: 128 | Max Edge: 270986 | Min Edge: 270630 | Avg Edge: 270946 | Edges: 34681189 | Vertices: 4036538 | True Vertices: 3997962 | Avg Degree: 17 | Min Degree: 0 | Max Degree: 14815

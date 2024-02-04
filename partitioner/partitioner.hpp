@@ -28,7 +28,7 @@ protected:
     vector<edge_t> edges;
     vector<vid_t> vertices;
     // 度数
-    vector<size_t> degrees;
+    vector<unsigned long> degrees;
     // 真实顶点数
     dense_bitset true_vids;
     string algorithm;

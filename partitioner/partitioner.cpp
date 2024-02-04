@@ -28,10 +28,10 @@ void Partitioner::config_output_files() {
 
 // 输出顶点分区结果：vertex_id partition_id
 void Partitioner::save_vertex(vid_t vertex_id, int partition_id) {
-    vertex_ofstream << vertex_id << " " << partition_id << endl;
+    // vertex_ofstream << vertex_id << " " << partition_id << endl;
 }
 
 // 输出边分区结果：from to partition_id
 void Partitioner::save_edge(vid_t from, vid_t to, int partition_id) {
-    edge_ofstream << from << " " << to << " " << partition_id << endl;
+   //  edge_ofstream << from << " " << to << " " << partition_id << endl;
 }

@@ -10,6 +10,8 @@ template<typename ValueType, typename KeyType, typename IdxType = vid_t>
 class MinHeap {
 public:
     IdxType n;
+    ValueType total_degree_in_heap;
+    ValueType avg_degree_in_heap;
     std::vector<std::pair<ValueType, KeyType> > heap;
     // 记录每个顶点vid在heap中对应的下标
     std::vector<IdxType> key2idx;
@@ -25,7 +27,8 @@ public:
         if (cur == 0) return 0;
         IdxType p = (cur - 1) / 2;
         // value是顶点的度，key是顶点vid
-        if (heap[cur].first < heap[p].first) {
+        // TODO 小于等于来调整
+        if (heap[cur].first <= heap[p].first) {
             std::swap(heap[cur], heap[p]);
             std::swap(key2idx[heap[cur].second], key2idx[heap[p].second]);
             return shift_up(p);
@@ -91,7 +94,12 @@ public:
         }
         return true;
     }
-
+    ValueType get_min_value() {
+        if (n > 0) {
+            return heap[0].first;
+        }
+        return INT64_MAX;
+    }
     bool get_min(ValueType &value, KeyType &key) {
         // 如果堆里面有元素，选择堆顶元素，因为堆顶元素引入的新顶点最少
         if (n > 0) {

@@ -12,6 +12,10 @@ EdgePartitioner::EdgePartitioner(BaseGraph &baseGraph, const std::string &algori
     this->visited = baseGraph.visited;
     this->reverse_indices = baseGraph.reverse_indices;
 
+    this->avg_degree = baseGraph.avg_degree;
+    this->min_degree = baseGraph.min_degree;
+    this->max_degree = baseGraph.max_degree;
+
     replication_factor = 0.0;
     alpha = 0.0;
     replicas = 0;
@@ -70,6 +74,9 @@ void EdgePartitioner::print_indices() {
            << " | Edges: " << num_edges
            << " | Vertices: " << num_vertices
            << " | True Vertices: " << true_vids.popcount()
+           << " | Avg Degree: " << avg_degree
+           << " | Min Degree: " << min_degree
+           << " | Max Degree: " << max_degree
            << endl;
     LOG(INFO) << result.str();
     appendToFile(result.str());
