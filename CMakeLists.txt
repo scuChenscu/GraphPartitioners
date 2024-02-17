@@ -31,6 +31,7 @@ add_library(SOURCE_FILES
         algorithms/model9/model9.cpp
         algorithms/model10/model10.cpp
         algorithms/model11/model11.cpp
+        algorithms/model12/model12.cpp
         algorithms/dbh/dbh.cpp
         algorithms/hdrf/hdrf.cpp
         algorithms/ldg/ldg.cpp

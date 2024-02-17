@@ -18,6 +18,7 @@
 #include "../algorithms/model9/model9.hpp"
 #include "../algorithms/model10/model10.hpp"
 #include "../algorithms/model11/model11.hpp"
+#include "../algorithms/model12/model12.hpp"
 #include "../algorithms/dne/dne.hpp"
 using namespace std;
 
@@ -188,6 +189,10 @@ void BaseGraph::partition() {
             }
             else if (algorithm == "model11") {
                 partitioner = new Model11Partitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "model12") {
+                partitioner = new Model12Partitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "dne") {

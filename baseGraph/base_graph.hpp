@@ -15,17 +15,17 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 128 };
+static const size_t partitions[] = { 32 };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const string algorithms[] = {      "model11" };
+static const string algorithms[] = {      "ne" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = ".graph";
+static  const string graph_suffix = "com-dblp.graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/large-scale";
+const static string input = "../graphs/medium-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;

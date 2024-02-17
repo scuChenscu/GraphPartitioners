@@ -1,10 +1,10 @@
-#include "model11.hpp"
+#include "model12.hpp"
 #include <unordered_map>
 using namespace std;
 
 //固定随机数
 // 构造函数
-Model11Partitioner::Model11Partitioner(BaseGraph& baseGraph, const string &input, const string &algorithm,
+Model12Partitioner::Model12Partitioner(BaseGraph& baseGraph, const string &input, const string &algorithm,
                              size_t num_partitions)
         : EdgePartitioner(baseGraph, algorithm, num_partitions), input(input), gen(985) {
     config_output_files();
@@ -32,10 +32,13 @@ Model11Partitioner::Model11Partitioner(BaseGraph& baseGraph, const string &input
     average_factor  = 1.5;
     front_factor = 1;
     front_partition = num_partitions * front_factor;
+
+    N = 10;
+
 }
 
 //最后一个子图就是剩下边组合而成
-void Model11Partitioner::assign_remaining() {
+void Model12Partitioner::assign_remaining() {
     auto &is_boundary = is_boundaries[num_partitions - 1], &is_core = is_cores[num_partitions - 1];
     repv(u, num_vertices) for (auto &i: adj_out[u])
             if (edges[i.v].valid()) {
@@ -55,7 +58,7 @@ void Model11Partitioner::assign_remaining() {
     }
 }
 
-void Model11Partitioner::assign_master() {
+void Model12Partitioner::assign_master() {
     vector<vid_t> count_master(num_partitions, 0);
     vector<vid_t> quota(num_partitions, num_vertices);
     long long sum = num_partitions * num_vertices;
@@ -85,13 +88,13 @@ void Model11Partitioner::assign_master() {
     }
 }
 
-size_t Model11Partitioner::count_mirrors() {
+size_t Model12Partitioner::count_mirrors() {
     size_t result = 0;
     rep(i, num_partitions) result += is_boundaries[i].popcount();
     return result;
 }
 
-void Model11Partitioner::split() {
+void Model12Partitioner::split() {
     total_time.start();
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
@@ -100,15 +103,15 @@ void Model11Partitioner::split() {
     repv(vid, num_vertices) {
         d.insert(adj_out[vid].size() + adj_in[vid].size(), vid);
     }
-    LOG(INFO) << "Start Model11 partitioning...";
+    LOG(INFO) << "Start Model12 partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "Model11" << endl
+    ss << "Model12" << endl
        << "BALANCE RATIO: " << BALANCE_RATIO
        << "| Average Factor: " << average_factor
        << "| Front Factor: " << front_factor
-       << "，将堆拆分成两个最小堆"
+       << "，引入新的数据结构，实现在选择新的核心顶点的时候，考虑相同剩余度数顶点的邻居顶点带来的影响"
        << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
@@ -118,12 +121,11 @@ void Model11Partitioner::split() {
 
     for (current_partition = 0; current_partition < num_partitions - 1; current_partition++) {
         // 当前分区的边数小于负载上限时，添加顶点到核心集C
-        std::unordered_map<vid_t , int> degree_map;
         while (occupied[current_partition] < capacity) {
             vid_t degree, vid;
             // LOG(INFO) << "Min_heap " << current_partition << "  size: " << min_heap.size() << endl;
             // !min_heap.get_min(degree, vid) && !min_hd.get_min(degree, vid)
-            if ((current_partition < front_partition && min_heap.size() + min_hd.size() == 0) || (current_partition >= front_partition && min_heap.size() == 0)) { // 当S\C为空时，从V\C中随机选择顶点
+            if (degree_map.empty()) { // 当S\C为空时，从V\C中随机选择顶点
                 // TODO 这里的逻辑不需要变
                 if (!get_free_vertex(vid)) { // 当V\C已经没有顶点，结束算法
                     break;
@@ -131,34 +133,81 @@ void Model11Partitioner::split() {
                 // 计算顶点的出度和入度，该顶点之前没有被加入S\C，所以它的邻边必然没有被加入过Ei
                 degree = adj_out[vid].size() + adj_in[vid].size();
             } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
-                if (current_partition >= front_partition) {
-                    min_heap.get_min(degree, vid);
-                    min_heap.remove(vid);
-                } else {
-                    vid_t d1 = 0, d2 = 0;
-                    d1 = min_heap.get_min_value();
-                    d2 = min_hd.get_min_value();
-                    // TODO 为什么d1 < d2效果更好
-                    if (d1 < d2) {
-                        min_heap.get_min(degree, vid);
-                        min_heap.remove(vid);
-                    } else {
-                        // LOG(INFO) << "equals" << endl;
-                        min_hd.get_min(degree, vid);
-                        min_hd.remove(vid);
+                // TODO 这里是移除顶点的逻辑，需要更新
+                auto degree_vids = degree_min_heap.begin();
+                degree = degree_vids->first;
+                set<vid_t>& vids = degree_vids->second;
+                int size = vids.size();
+                // LOG(INFO) << "Size: " << size << " in degree: " << degree << endl;
+
+                if (size > 1) { // 执行选取顶点策略
+                    // LOG(INFO) << "Execute Select Vid" << endl;
+                    // 遍历set, 从n个顶点中选取最优
+                    int n = N;
+//                    if (size < N) {
+//                      n = size;
+//                    }
+                    n = size;
+                    // 1. 遍历顶点的一阶邻居，计算一阶邻居有多少个二阶邻居在候选集，选择候选集邻居最多的顶点
+                    // vids是度数相同的顶点，对每个vid去找它不在边界集中的顶点
+                    auto iterator = vids.begin();
+                    int max = 0;
+                    vid = *iterator;
+                    for(int i = 0; i < n; i++){
+                        vid_t cur = *iterator;
+                        int count = 0;
+                        // 计算邻居数
+                        rep (direction, 2) {
+                            adjlist_t &neighbors = direction ? adj_out[cur] : adj_in[cur];
+                            // 遍历顶点的邻边
+                            // LOG(INFO) << neighbors.size();
+                            for (size_t idx = 0; idx < neighbors.size(); idx++) {
+                                // 判断邻居edges[neighbors[i].v]是否已经分配
+                                if (edges[neighbors[idx].v].valid()) {
+                                    // 对这个顶点去找邻居，邻居在边界集合，则计数+1
+                                    vid_t &u = direction ? edges[neighbors[idx].v].second : edges[neighbors[idx].v].first;
+                                    rep(u_direction, 2) {
+                                        adjlist_t &u_neighbors = u_direction ? adj_out[u] : adj_in[u];
+                                        for (size_t u_idx = 0; u_idx < u_neighbors.size(); u_idx++) {
+                                            if (edges[u_neighbors[u_idx].v].valid()) {
+                                                vid_t &u_n = u_direction ? edges[u_neighbors[u_idx].v].second : edges[u_neighbors[u_idx].v].first;
+                                                if (is_boundaries[current_partition].get(u_n)) {
+                                                    count++;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (count > max) {
+                            vid = cur;
+                            max = count;
+                        }
+                        iterator++;
                     }
+                } else {
+                    vid = *vids.begin();
+                    // 删除
+                    // LOG(INFO) << "Vids first to Remove: " << *degree_vids->second.begin() << endl;
+                    // LOG(INFO) << "Remove vid from S: " << vid << ", degree: " << degree << endl;
                 }
+                degree_map.erase(vid);
+                vids.erase(vid);
+                // LOG(INFO) << "Vids first after Remove: " << *degree_vids->second.begin() << endl;
+                if (vids.empty()) {
+                    degree_min_heap.erase(degree);
+                }
+
             }
             // 前面是获取顶点的两种方式，要么是从S\C，要么是从V\C
             // 把顶点加入到C，即核心集
             // 此时degree要么是从min_heap获取，要么是一个新顶点直接计算得到
+            // LOG(INFO) << "vid: " << vid << ", degree: " << degree << endl;
             occupy_vertex(vid, degree);
         }
-        //TODO 清空最小堆
-        min_heap.clear();
-        if (current_partition < front_partition) {
-            min_hd.clear();
-        }
+        degree_min_heap.clear();
+        degree_map.clear();
 
         //TODO 为什么要全局扫描，移除已经分配的邻边
         // TODO 为什么要检查一遍
@@ -228,7 +277,7 @@ void Model11Partitioner::split() {
     total_time.stop();
 }
 
-void Model11Partitioner::reindex() {
+void Model12Partitioner::reindex() {
     // 随机选择顶点，进行广度遍历，重新索引
     vid_t index = 0;
     vid_t vid = dis(gen);
@@ -257,7 +306,7 @@ void Model11Partitioner::reindex() {
     }
 }
 
-bool Model11Partitioner::get_target_vertex(vid_t &vid) {
+bool Model12Partitioner::get_target_vertex(vid_t &vid) {
     // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
     // TODO 以上这个计算不太现实
     // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
@@ -268,7 +317,7 @@ bool Model11Partitioner::get_target_vertex(vid_t &vid) {
     return true;
 }
 
-bool Model11Partitioner::get_free_vertex(vid_t &vid) {
+bool Model12Partitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
     vid = dis(gen);
     vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
@@ -286,7 +335,7 @@ bool Model11Partitioner::get_free_vertex(vid_t &vid) {
     return true;
 }
 
-void Model11Partitioner::occupy_vertex(vid_t vid, vid_t d) {
+void Model12Partitioner::occupy_vertex(vid_t vid, vid_t d) {
     CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
     // 核心集是vector<dense_bitset>，dense_bitset是一个稠密位图
     // 对位图的vid位置置1，表示vid被分配到current_partition分区
@@ -314,7 +363,7 @@ void Model11Partitioner::occupy_vertex(vid_t vid, vid_t d) {
     adj_in[vid].clear();
 }
 
-size_t Model11Partitioner::check_edge(const edge_t *e) {
+size_t Model12Partitioner::check_edge(const edge_t *e) {
     rep (i, current_partition) {
         auto &is_boundary = is_boundaries[i];
         if (is_boundary.get(e->first) && is_boundary.get(e->second) &&
@@ -339,7 +388,7 @@ size_t Model11Partitioner::check_edge(const edge_t *e) {
     return num_partitions;
 }
 
-void Model11Partitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
+void Model12Partitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
     // TODO 记录哪条边被分配了
     // save_edge(from, to, current_partition);
     true_vids.set_bit_unsync(from);
@@ -352,7 +401,7 @@ void Model11Partitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
     degrees[to]--;
 }
 
-void Model11Partitioner::add_boundary(vid_t vid) {
+void Model12Partitioner::add_boundary(vid_t vid) {
     // 获取到当前分区的核心集和边界集
     auto &is_core = is_cores[current_partition];
     auto &is_boundary = is_boundaries[current_partition];
@@ -370,12 +419,13 @@ void Model11Partitioner::add_boundary(vid_t vid) {
     // 如果顶点没有在核心集中，直接把顶点的度数据加入到最小堆
     // 能够走到这一步，说明是将顶点加入到核心集中，将它的邻居加入到边界集，此时需要将它的度数计算出来加入到min heap
     if (!is_core.get(vid)) {
-        int degree = adj_out[vid].size() + adj_in[vid].size();
-        if (current_partition >= front_partition || degree <= average_degree * average_factor) {
-            min_heap.insert(degree, vid);
-        } else {
-            min_hd.insert(degree, vid);
+        vid_t degree = adj_out[vid].size() + adj_in[vid].size();
+        // LOG(INFO) << "Insert vid: " << vid << ", degree: " << degree << endl;
+        degree_map.insert({vid, degree});
+        if (!degree_min_heap.contains(degree)) {
+            degree_min_heap.insert({degree, {}});
         }
+        degree_min_heap[degree].insert(vid);
     }
     //仅支持无向图，在计算neighbor的时候有向和无向会导致邻居的差别从而影响分割
     // TODO 下面的步骤就是：把顶点x的邻居y = N(x)\S -> S
@@ -392,10 +442,24 @@ void Model11Partitioner::add_boundary(vid_t vid) {
                 if (is_core.get(u)) { // 如果顶点在核心集中
                     assign_edge(current_partition, direction ? vid : u,
                                 direction ? u : vid);
-                    if (min_heap.contains(vid)) {
-                        min_heap.decrease_key(vid); // 默认移除一条边
-                    } else {
-                        min_hd.decrease_key(vid);
+                    // 更新顶点的度数
+                    if (degree_map.contains(vid)) {
+                        vid_t old_degree = degree_map[vid];
+                        auto& old_keys = degree_min_heap[old_degree];
+                        vid_t new_degree = degree_map[vid] - 1;
+                        if (new_degree == 0) {
+                             degree_map.erase(vid);
+                        } else {
+                            degree_map[vid] = new_degree;
+                            if (!degree_min_heap.contains(new_degree)) {
+                                degree_min_heap.insert({new_degree, {}});
+                            }
+                            degree_min_heap[new_degree].insert(vid);
+                        }
+                        old_keys.erase(vid);
+                        if (old_keys.empty()) {
+                            degree_min_heap.erase(old_degree);
+                        }
                     }
                     edges[neighbors[i].v].remove();
                     std::swap(neighbors[i], neighbors.back());
@@ -404,19 +468,45 @@ void Model11Partitioner::add_boundary(vid_t vid) {
                            occupied[current_partition] < capacity) { // 如果顶点在边界集中，并且当前分区负载没有达到上限
                     // 将边加入边集
                     assign_edge(current_partition, direction ? vid : u, direction ? u : vid);
-                    if (min_heap.contains(vid)) {
-                        min_heap.decrease_key(vid); // 默认移除一条边
-                    } else {
-                        min_hd.decrease_key(vid);
+                    // 更新顶点的度数
+                    if (degree_map.contains(vid)) {
+                        vid_t old_degree = degree_map[vid];
+                        auto& old_keys = degree_min_heap[old_degree];
+                        vid_t new_degree = degree_map[vid] - 1;
+                        if (new_degree == 0) {
+                            degree_map.erase(vid);
+                        } else {
+                            degree_map[vid] = new_degree;
+                            if (!degree_min_heap.contains(new_degree)) {
+                                degree_min_heap.insert({new_degree, {}});
+                            }
+                            degree_min_heap[new_degree].insert(vid);
+                        }
+                        old_keys.erase(vid);
+                        if (old_keys.empty()) {
+                            degree_min_heap.erase(old_degree);
+                        }
+                    }
+                    // 更新顶点的度数
+                    if (degree_map.contains(u)) {
+                        vid_t old_degree = degree_map[u];
+                        auto& old_keys = degree_min_heap[old_degree];
+                        vid_t new_degree = degree_map[u] - 1;
+                        if (new_degree == 0) {
+                            degree_map.erase(u);
+                        } else {
+                            degree_map[u] = new_degree;
+                            if (!degree_min_heap.contains(new_degree)) {
+                                degree_min_heap.insert({new_degree, {}});
+                            }
+                            degree_min_heap[new_degree].insert(u);
+                        }
+                        old_keys.erase(u);
+                        if (old_keys.empty()) {
+                            degree_min_heap.erase(old_degree);
+                        }
                     }
 
-                    if (min_heap.contains(u)) {
-                        min_heap.decrease_key(u); // 默认移除一条边
-                    } else {
-                        min_hd.decrease_key(u);
-                    }
-//                    min_heap.decrease_key(vid);
-//                    min_heap.decrease_key(u);
                     edges[neighbors[i].v].remove();
                     std::swap(neighbors[i], neighbors.back());
                     neighbors.pop_back();
