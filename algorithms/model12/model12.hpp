@@ -69,6 +69,8 @@ private:
 
     int N;
 
+    map<vid_t, set<vid_t>> edge_pre_allocation;
+
 
     size_t check_edge(const edge_t *e);
 

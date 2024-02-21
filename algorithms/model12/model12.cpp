@@ -33,7 +33,7 @@ Model12Partitioner::Model12Partitioner(BaseGraph& baseGraph, const string &input
     front_factor = 1;
     front_partition = num_partitions * front_factor;
 
-    N = 10;
+    N = -1;
 
 }
 
@@ -139,21 +139,21 @@ void Model12Partitioner::split() {
                 set<vid_t>& vids = degree_vids->second;
                 int size = vids.size();
                 // LOG(INFO) << "Size: " << size << " in degree: " << degree << endl;
-
+                // TODO 使用一些方法，避免重复计算
                 if (size > 1) { // 执行选取顶点策略
                     // LOG(INFO) << "Execute Select Vid" << endl;
                     // 遍历set, 从n个顶点中选取最优
                     int n = N;
-//                    if (size < N) {
-//                      n = size;
-//                    }
-                    n = size;
+                    if (N > 0 && size < N) {
+                      n = size;
+                    }
+                    // n = size; // 全量选取
                     // 1. 遍历顶点的一阶邻居，计算一阶邻居有多少个二阶邻居在候选集，选择候选集邻居最多的顶点
                     // vids是度数相同的顶点，对每个vid去找它不在边界集中的顶点
                     auto iterator = vids.begin();
                     int max = 0;
                     vid = *iterator;
-                    for(int i = 0; i < n; i++){
+                    for(int i = 0; i < n; i++){  // 遍历n个最小相同剩余度数的顶点
                         vid_t cur = *iterator;
                         int count = 0;
                         // 计算邻居数
@@ -161,18 +161,31 @@ void Model12Partitioner::split() {
                             adjlist_t &neighbors = direction ? adj_out[cur] : adj_in[cur];
                             // 遍历顶点的邻边
                             // LOG(INFO) << neighbors.size();
-                            for (size_t idx = 0; idx < neighbors.size(); idx++) {
+                            for (size_t idx = 0; idx < neighbors.size(); idx++) { // 对每个候选顶点的一阶邻居
                                 // 判断邻居edges[neighbors[i].v]是否已经分配
                                 if (edges[neighbors[idx].v].valid()) {
                                     // 对这个顶点去找邻居，邻居在边界集合，则计数+1
                                     vid_t &u = direction ? edges[neighbors[idx].v].second : edges[neighbors[idx].v].first;
-                                    rep(u_direction, 2) {
-                                        adjlist_t &u_neighbors = u_direction ? adj_out[u] : adj_in[u];
-                                        for (size_t u_idx = 0; u_idx < u_neighbors.size(); u_idx++) {
-                                            if (edges[u_neighbors[u_idx].v].valid()) {
-                                                vid_t &u_n = u_direction ? edges[u_neighbors[u_idx].v].second : edges[u_neighbors[u_idx].v].first;
-                                                if (is_boundaries[current_partition].get(u_n)) {
-                                                    count++;
+                                    // 对这个V中的顶点去找在候选顶点中的顶点数量
+                                    if (edge_pre_allocation.contains(u)) {
+                                        count = edge_pre_allocation[u].size();
+                                    } else {
+                                        rep(u_direction, 2) {
+                                            adjlist_t &u_neighbors = u_direction ? adj_out[u] : adj_in[u];
+                                            for (auto & u_neighbor : u_neighbors) {
+                                                if (edges[u_neighbor.v].valid()) {
+                                                    vid_t &u_n = u_direction ? edges[u_neighbor.v].second : edges[u_neighbor.v].first;
+
+                                                    // 这些边都是可以预分配的，不然每次都要重复计算
+                                                    // 可是要怎么去实现呢
+                                                    // 通过一个map来维护？把已经预计算过的顶点都维护起来，感觉整个过程挺复杂
+                                                    // 首先对所有相同最小剩余度数的候选顶点计算二阶邻居数；然后当确定把某个候选顶点加入到核心顶点之后，
+                                                    // 更新一遍在计算集合中的候选顶点的二阶邻居数；那么这样的话，在找到最大边数的顶点时，只需要去更新map，
+                                                    // 但是如果某个顶点不在map中，则不需要去更新，因为后续它加入是会被更新
+                                                    // TODO 是要引入最多边的候选顶点
+                                                    if (is_boundaries[current_partition].get(u_n)) {
+                                                        count++;
+                                                    }
                                                 }
                                             }
                                         }
