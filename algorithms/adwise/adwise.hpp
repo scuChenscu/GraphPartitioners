@@ -46,12 +46,15 @@ private:
     int index = 0;
     unordered_set<int> C;
     unordered_set<int> Q;
-    unordered_set<int> W;
-    int w = 1;
-
+    int W; // 表示窗口真实元素个数
+    // 每次更新窗口边需要调整的阈值
     double threshold = 0.0;
-
-
+    double scores = 0.0;  // 窗口内得分总和
+    int c = 0;
+    int w = 10;
+    // 窗口参数，每次窗口大小变更会重置
+    double w_scores;
+    double last_scores = 0.0;
 
 
 protected:
@@ -63,13 +66,18 @@ protected:
 
     void update_min_max_load(int max_p);
 
+    void update_threshold();
+    void add_edge_into_window();
+    void remove_edge_from_window(int e_id, double score);
+    int get_window_size();
     void batch_node_assign_neighbors(vector<edge_t> &edges);
 
     void read_and_do(const string& opt_name);
 
-    void calculate_set();
-    void get_best_assignment(int &e_id, int &p_id);
-    double calculate_score(int e_id);
+    double get_best_assignment(int &e_id, int &p_id);
+    double calculate_score(int e_id, int &p_id);
+
+    void assign_edge(int e_id, int p_id);
 
 public:
     AdwisePartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,

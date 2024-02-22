@@ -168,90 +168,166 @@ void AdwisePartitioner::split() {
     // 不断地移入移除边，直到满足w次操作，尝试调整窗口大小，并且满载w
     // 移入移除边需要去更新threshold
     while(index < num_edges) {
-        if (W.size() < w) {
-            double sc = calculate_score(index);
-            // 计算加入C还是Q
-            // 计算该边加入所有分区的最高得分，如果高于threshold，在C，否则在Q
-            // TODO threshold始终为w中的平均值
-            if (sc > threshold + 1) {
-                C.insert(index++);
-            } else {
-                Q.insert(index++);
-            }
-            // 更新threshold
-            threshold = (threshold * W.size() + sc) / (W.size() + 1) ;
-            W.insert(index);
+        if (get_window_size() < w) {
+            // add_edge_into_window();
+            C.insert(index++);
         }
         // 选择最好的e-p
         int e_id, p_id;
-        get_best_assignment(e_id, p_id);
+        double score = get_best_assignment(e_id, p_id);
+        w_scores += score;
+//        LOG(INFO) << "P id: " << p_id;
+//        remove_edge_from_window(e_id, score);
         // 分配
-        edge_t &edge = edges[e_id];
-        is_mirrors[edge.first].set_bit_unsync(p_id);
-        is_mirrors[edge.second].set_bit_unsync(p_id);
-        occupied[p_id]++;
-        assigned_edges++;
-        update_min_max_load(p_id);
-        // 分配边
-        // TODO 更新threshold
+        // edge_t &edge = edges[e_id];
+        assign_edge(e_id, p_id);
+        // 如果是新增副本，需要重新计算Q
+        // TODO 直接不算了
+//        if (!is_mirrors[edge.first].get(p_id)) {
+//            // 需要计算的度得分和簇得分
+//            // 遍历Q
+//        }
+//        if(!is_mirrors[edge.second].get(p_id)) {
+//
+//        }
+
     }
+    LOG(INFO) << "Assign window";
+    // 直接分配完
+     if(get_window_size() > 0) {
+         C.insert(Q.begin(), Q.end());
+         while (!C.empty()) {
+             // 分配边
+             int e_id, p_id;
+             get_best_assignment(e_id, p_id);
+             assign_edge(e_id, p_id);
+         }
+     }
+
     total_time.stop();
 }
 
-void AdwisePartitioner::get_best_assignment(int &e_id, int &p_id){
-    // 不用计算，从C中选出最好的结果
+void AdwisePartitioner::assign_edge(int e_id, int p_id) {
+    edge_t &edge = edges[e_id];
+    is_mirrors[edge.first].set_bit_unsync(p_id);
+    is_mirrors[edge.second].set_bit_unsync(p_id);
+    occupied[p_id]++;
+    assigned_edges++;
+    update_min_max_load(p_id);
+}
 
-    W.erase(e_id);
-    C.erase(e_id);
-    if (C.empty()) { // 计算Q
-
+double AdwisePartitioner::get_best_assignment(int &e_id, int &p_id){
+    // TODO 这一步计算，类似HDRF，但是HDRF只计算一个，这个计算整个C
+    double max_score = 0.0;
+    for (const auto &ce_id : C) {
+        int p;
+        double score = calculate_score(ce_id, p);
+        if (score > max_score) {
+            max_score = score;
+            e_id = ce_id;
+            p_id = p;
+        }
     }
-    if (assigned_edges % w == 0) { // 可以用HDRF和NE算法来估计这个时间
-        // C1：计算分配w条边的平均得分；
-        // C2：剩余的边数和距离超过初始估计上限时间；
-        if (true && true) {
-            w = 2 * w;
-            while(W.size() < w && index < num_edges) {
-                W.insert(index++);
+    C.erase(e_id);
+
+//    if (c % w == 0) { // 可以用HDRF和NE算法来估计这个时间
+//        // C1：计算分配w条边的平均得分；
+//        // C2：剩余的边数和距离超过初始估计上限时间；
+//        if (w_scores / c > last_scores) {
+//            w = 2 * w;
+//            // c = 0;
+//            while(get_window_size() < w && index < num_edges) {
+//                // add_edge_into_window();
+//                C.insert(index);
+//                index++;
+//            }
+//        }
+//        // 重置分数
+//        last_scores = scores;
+//        w_scores = 0.0;
+//        // TODO 时间上限收缩窗口
+////        else if (false) {
+////            // 向上取整
+////            int res = w % 2;
+////            w = w / 2 + res;
+////            c = 0;
+////        }
+//    }
+    c++;
+}
+
+void AdwisePartitioner::remove_edge_from_window(int e_id, double sc) {
+    w_scores += sc;
+    scores = scores - sc;
+    update_threshold();
+    C.erase(e_id);
+    // 更新threshold
+    if (C.empty()) { // 计算Q
+        // 从Q -> C，将大于threshold的边移入C
+        for(const auto &qe_id : Q) {
+            edge_t &e = edges[qe_id];
+            int p;
+            double score = calculate_score(qe_id, p);
+            if (score > threshold + 1) {
+                C.insert(qe_id);
+                Q.erase(qe_id);
             }
-        } else if (true) {
-            // 向上取整
-            int res = w % 2;
-            w = w / 2 + res;
         }
     }
 }
 
-void AdwisePartitioner::calculate_set() {
-
+void AdwisePartitioner::add_edge_into_window() {
+    int pid;
+    double sc = calculate_score(index, pid);
+    // 计算加入C还是Q
+    // 计算该边加入所有分区的最高得分，如果高于threshold，在C，否则在Q
+    // TODO threshold始终为w中的平均值
+    C.insert(index);
+//    if (sc > threshold + 1) {
+//        C.insert(index);
+//    } else {
+//        Q.insert(index);
+//    }
+//    // 更新threshold
+//    scores += sc;
+//    update_threshold();
+    index++;
 }
 
-double AdwisePartitioner::calculate_score(int e_id) {
+int AdwisePartitioner::get_window_size() {
+    return C.size() + Q.size();
+}
+
+void AdwisePartitioner::update_threshold() {
+    threshold = scores / (double)get_window_size();
+}
+
+double AdwisePartitioner::calculate_score(int e_id, int &pid) {
     edge_t &e = edges[e_id];
     vid_t u = e.first;
     vid_t v = e.second;
     // 得分由三部分组成，平衡得分，度得分，簇得分
-    double max_score = 0;
+    double max_score = -1;
     for (int i = 0; i < num_partitions; i++) {
         // 平衡得分
-        double bal, deg;
+        double bal;
         bal = max_load - edge_load[i];
         if (min_load != UINT64_MAX) {
             bal /= (epsilon + max_load - min_load);
         }
         // 度得分
-        double rep = 0;
+        double rep;
         double du = 0;
         double dv = 0;
         if (is_mirrors[u].get(i)) {
-            du = 2 - degrees[u] / (2 * max_degree);
+            du = 2 - (double)degrees[u] / (double)(2 * max_degree);
         }
         if (is_mirrors[v].get(i)) {
-            dv = 2 - degrees[v] / (2 * max_degree);
+            dv = 2 - (double)degrees[v] / (double)(2 * max_degree);
         }
         rep = du + dv;
         // 簇得分
-        double cs = 0;
+        double cs;
         int nc = 0;
         int n = 0;
         // 计算u,v 在当前分区的邻居数
@@ -266,7 +342,6 @@ double AdwisePartitioner::calculate_score(int e_id) {
                         nc++;
                     }
                 }
-
             }
         }
         if (is_mirrors[v].get(i)) {
@@ -282,12 +357,19 @@ double AdwisePartitioner::calculate_score(int e_id) {
                 }
             }
         }
-        cs = (double)nc / (double)n;
 
-        double sc = bal + rep + cs;
+        cs = (double)nc / (double)(n + 0.1); // 避免除以0
+        if (rep > 0) {
+            LOG(INFO) << "bal: " << bal << " rep: " << rep << " cs: " << cs;
+
+        }
+
+        double sc = 2.8 * bal + rep + cs;
         if (sc > max_score) {
             max_score = sc;
+            pid = i;
         }
     }
+    // LOG(INFO) << "P id: " << pid;
     return max_score;
 }

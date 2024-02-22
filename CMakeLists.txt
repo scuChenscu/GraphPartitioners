@@ -38,6 +38,7 @@ add_library(SOURCE_FILES
         algorithms/fennel/fennel.cpp
         algorithms/greedy/greedy.cpp
         algorithms/rand/rand.cpp
+        algorithms/adwise/adwise.cpp
         )
 add_executable(GraphPartitioning main.cpp)
 target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)

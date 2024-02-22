@@ -6,6 +6,7 @@
 #include "../algorithms/ne/ne.hpp"
 #include "../algorithms/dbh/dbh.hpp"
 #include "../algorithms/hdrf/hdrf.hpp"
+#include "../algorithms/adwise/adwise.hpp"
 #include "../algorithms/ldg/ldg.hpp"
 #include "../algorithms/fennel/fennel.hpp"
 #include "../algorithms/greedy/greedy.hpp"
@@ -206,7 +207,12 @@ void BaseGraph::partition() {
                 partitioner = new HdrfPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
                                                   balance_ratio, lambda, isShuffle);
                 partitioners.push_back(partitioner);
-            } else if (algorithm == "ldg") {
+            } else if (algorithm == "adwise") {
+                partitioner = new AdwisePartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
+                                                  balance_ratio, lambda, isShuffle);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "ldg") {
                 partitioner = new LdgPartitioner(*this, graph_name, algorithm, num_partitions, memory_size, isShuffle);
                 partitioners.push_back(partitioner);
             } else if (algorithm == "fennel") {

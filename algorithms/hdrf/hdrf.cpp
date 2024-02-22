@@ -103,6 +103,7 @@ int HdrfPartitioner::find_max_score_partition(edge_t &e) {
             bal /= (epsilon + max_load - min_load);
         }
         // 计算结果应该有两部分组成，rep和bal
+        LOG(INFO) << "rep: " << rep << " bal: " << lambda * bal;
         double score_p = rep + lambda * bal;
         // LOG(INFO) << "score_p: " << score_p;
         CHECK_GE(score_p, 0) << "score_p: " << score_p;
