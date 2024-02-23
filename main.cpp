@@ -8,6 +8,7 @@
 #include <iostream>
 #include <csignal>
 #include "converter/conversions.hpp"
+#include "converter/shuffler.hpp"
 #include "utils/util.hpp"
 #include "baseGraph/base_graph.hpp"
 #include <filesystem>
@@ -54,9 +55,17 @@ int main() {
             string substring = graph_name.substr(graph_name.size() - len, len);
             if (substring != graph_suffix) continue;
             LOG(INFO) << "Convert " << graph_name << " to binary edgelist" << endl;
-            auto *converter = new Converter(graph_name);
+            Converter *converter;
+            if (need_to_shuffle) {
+                LOG(INFO) << "Using shuffle dataset" << endl;
+                converter = new Shuffler(graph_name);
+            } else {
+                converter = new Converter(graph_name);
+
+            }
             convert(graph_name, converter, memory_size);
             delete converter;
+
             auto *baseGraph = new BaseGraph(graph_name);
             baseGraph->partition();
             LOG(INFO) << "Finish partition on " << graph_name << endl;

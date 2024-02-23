@@ -86,8 +86,8 @@ inline std::string getCurrentTime() {
 }
 
 
-
-void writea(int f, char *buf, size_t nbytes);
+//
+//void writea(int f, char *buf, size_t nbytes);
 
 inline string binary_edgelist_name(const string &filename) {
     // string new_filename = change2tmpdir(filename);
@@ -99,10 +99,13 @@ inline string binary_edgelist_name(const string &filename) {
     return ss.str();
 }
 
-inline string shuffled_binary_edgelist_name(const string &input) {
-    string filename = change2tmpdir(input);
+inline string shuffled_binary_edgelist_name(const string &filename) {
+    // string filename = change2tmpdir(input);
+    string path = "../graphs/binedgelist/";
+    size_t found = filename.find_last_of('/');
+    string new_filename  = path + filename.substr(found + 1);
     stringstream ss;
-    ss << filename << ".shuffled.binedgelist";
+    ss << new_filename << ".shuffled.binedgelist";
     return ss.str();
 }
 

@@ -1,7 +1,3 @@
-//
-// Created by muzongshen on 2021/9/18.
-//
-
 #pragma once
 
 #include <string>
@@ -11,8 +7,7 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <random>
-
-#include "../utils/util.hpp"
+#include <utility>
 #include "conversions.hpp"
 
 class Shuffler : public Converter {
@@ -46,7 +41,7 @@ private:
     void cwrite(edge_t e, bool flush = false);
 
 public:
-    Shuffler(std::string input) : Converter(input) {}
+    Shuffler(std::string input) : Converter(std::move(input)) {}
 
     bool done() { return is_exists(shuffled_binary_edgelist_name(filename)); }
 
@@ -55,5 +50,17 @@ public:
     void finalize();
 
     void add_edge(vid_t source, vid_t target);
+
+    static void writea(int f, char *buf, size_t nbytes) {
+        size_t nwritten = 0;
+        while (nwritten < nbytes) {
+            ssize_t a = write(f, buf, nbytes - nwritten);
+            PCHECK(a != ssize_t(-1)) << "Could not write " << (nbytes - nwritten)
+                                     << " bytes!";
+            buf += a;
+            nwritten += a;
+        }
+    }
+
 };
 

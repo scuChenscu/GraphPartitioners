@@ -15,17 +15,20 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 4 };
+static const size_t partitions[] = { 8 };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
+static const double EDGE_RATIO = 0.5;
+static const bool need_to_shuffle = true;
+static const string algrithm_type = "stream";
 static const string algorithms[] = {       "hdrf" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = "4elt.graph";
+static  const string graph_suffix = "web-Google.graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/small-scale";
+const static string input = "../graphs/medium-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
@@ -74,6 +77,11 @@ public:
     mt19937 gen;
     //均匀分布区间
     uniform_int_distribution<vid_t> dis;
+
+    vector<edge_t> off_part;
+    vector<edge_t> stream_part;
+
+
     // 构造函数
     explicit BaseGraph(const string &graph_name);
 

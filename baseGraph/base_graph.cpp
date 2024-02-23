@@ -21,13 +21,20 @@
 #include "../algorithms/model11/model11.hpp"
 #include "../algorithms/model12/model12.hpp"
 #include "../algorithms/dne/dne.hpp"
+#include "../algorithms/offstremNG/offstreamNG.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
     this->graph_name = graph_name;
+    ifstream fin;
+    if (need_to_shuffle) {
+        fin.open(shuffled_binary_edgelist_name(graph_name),
+                     ios::binary | ios::ate);
+    } else {
+        fin.open(binary_edgelist_name(graph_name),
+                     ios::binary | ios::ate);
+    }
 
-    ifstream fin(binary_edgelist_name(graph_name),
-                 ios::binary | ios::ate);
     // tellp 用于返回写入位置，
     // tellg 则用于返回读取位置也代表着输入流的大小
     auto filesize = fin.tellg();
@@ -47,13 +54,35 @@ BaseGraph::BaseGraph(const string& graph_name) {
     edges.resize(num_edges);
     degrees.resize(num_vertices, 0);
     true_vids.resize(num_vertices);
+
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
-    // 初始化的时候构造图
-     adj_out.build(edges);
-     // 存储反向边
-     adj_in.build_reverse(edges);
+    if (algrithm_type == "offstream") {
+        // 将edges分为两个集合
+        size_t size = edges.size();
+        size_t halfSize = size * EDGE_RATIO; // 整数除法得到一半大小
+        if (size % 2 != 0) {
+            ++halfSize; // 如果总数是奇数，则第二个向量多一个元素
+        }
+
+        off_part.reserve(halfSize);
+        stream_part.reserve(size - halfSize);
+
+        std::copy(edges.begin(), edges.begin() + halfSize, std::back_inserter(off_part));
+        std::copy(edges.begin() + halfSize, edges.end(), std::back_inserter(stream_part));
+
+        CHECK_EQ(edges.size(), off_part.size() + stream_part.size()) << "edges no equals!";
+
+        adj_out.build(off_part);
+        adj_in.build_reverse(off_part);
+
+    } else {
+        // 初始化的时候构造图
+        adj_out.build(edges);
+        // 存储反向边
+        adj_in.build_reverse(edges);
+    }
     gen.seed(DEFAULT_SEED);
 
     dis.param(
@@ -224,6 +253,9 @@ void BaseGraph::partition() {
                 partitioners.push_back(partitioner);
             } else if (algorithm == "rand") {
                 partitioner = new RandPartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            } else if (algorithm == "offstreamNG") {
+                partitioner = new OffstreamNGPartitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
             }
             else {
