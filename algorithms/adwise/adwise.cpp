@@ -214,6 +214,7 @@ void AdwisePartitioner::assign_edge(int e_id, int p_id) {
     occupied[p_id]++;
     assigned_edges++;
     update_min_max_load(p_id);
+    // LOG(INFO) << assigned_edges;
 }
 
 double AdwisePartitioner::get_best_assignment(int &e_id, int &p_id){
@@ -359,10 +360,10 @@ double AdwisePartitioner::calculate_score(int e_id, int &pid) {
         }
 
         cs = (double)nc / (double)(n + 0.1); // 避免除以0
-        if (rep > 0) {
-            LOG(INFO) << "bal: " << bal << " rep: " << rep << " cs: " << cs;
-
-        }
+//        if (rep > 0) {
+//            LOG(INFO) << "bal: " << bal << " rep: " << rep << " cs: " << cs;
+//
+//        }
 
         double sc = 2.8 * bal + rep + cs;
         if (sc > max_score) {

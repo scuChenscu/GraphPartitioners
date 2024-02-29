@@ -23,10 +23,10 @@ static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
 static const double EDGE_RATIO = 0.5;
 static const bool need_to_shuffle = true;
-static const string algrithm_type = "stream";
-static const string algorithms[] = {       "hdrf" };
+static const string algrithm_type = "offstream";
+static const string algorithms[] = {       "offstreamNWG" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = "web-Google.graph";
+static  const string graph_suffix = ".graph";
 static const bool isShuffle = false;
 const static string input = "../graphs/medium-scale";
 const static bool REINDEX = false;

@@ -21,7 +21,9 @@
 #include "../algorithms/model11/model11.hpp"
 #include "../algorithms/model12/model12.hpp"
 #include "../algorithms/dne/dne.hpp"
-#include "../algorithms/offstremNG/offstreamNG.hpp"
+#include "../algorithms/offstreamNG/offstreamNG.hpp"
+#include "../algorithms/offstreamNH/offstreamNH.hpp"
+#include "../algorithms/offstreamNWG/offstreamNWG.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
@@ -257,7 +259,13 @@ void BaseGraph::partition() {
             } else if (algorithm == "offstreamNG") {
                 partitioner = new OffstreamNGPartitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
-            }
+            } else if (algorithm == "offstreamNH") {
+            partitioner = new OffstreamNHPartitioner(*this, graph_name, algorithm, num_partitions);
+            partitioners.push_back(partitioner);
+        }   else if (algorithm == "offstreamNWG") {
+            partitioner = new OffstreamNWGPartitioner(*this, graph_name, algorithm, num_partitions);
+            partitioners.push_back(partitioner);
+        }
             else {
                 LOG(ERROR) << "Unknown algorithm: " << algorithm;
                 continue;

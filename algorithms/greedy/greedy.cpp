@@ -5,8 +5,8 @@ GreedyPartitioner::GreedyPartitioner(BaseGraph& baseGraph,
                                      const string& input,
                                      const string &algorithm,
                                      size_t num_partitions) : EdgePartitioner(baseGraph, algorithm, num_partitions){
-    vertex_partitions.assign(num_vertices, set<size_t>());
-
+    vertex_partitions.assign(num_vertices, vector<int>(num_partitions));
+    vp_set.assign(num_vertices, set<size_t>());
 }
 
 //贪心策略 Greedy,定义了针对不同类型的边的划分
@@ -26,33 +26,34 @@ void GreedyPartitioner::split() {
         vid_t first = edge.first;
         vid_t second = edge.second;
 
-        set<size_t> first_partition = vertex_partitions[first];
-        set<size_t> second_partition = vertex_partitions[second];
+        vector<int> first_partition = vertex_partitions[first];
+        vector<int> second_partition = vertex_partitions[second];
+
+        set<size_t> fp = vp_set[first];
+        set<size_t> sp = vp_set[second];
+
 
         set<size_t> intersections;
-
-        // 使用set_intersection算法求交集
-        set_intersection(first_partition.begin(), first_partition.end(),
-                              second_partition.begin(), second_partition.end(),
-                              inserter(intersections, intersections.begin()));
-
-
         set<size_t> unions;
-
-        set_union(first_partition.begin(), first_partition.end(),
-                         second_partition.begin(), second_partition.end(),
-                         inserter(intersections, intersections.begin()));
+        for (int i = 0; i < num_partitions; i++) {
+            if (first_partition[i] == 1 && second_partition[i] == 1) {
+                intersections.insert(i);
+            }
+            if (first_partition[i] == 1 || second_partition[i] == 1) {
+                unions.insert(i);
+            }
+        }
 
         size_t partition = 0;
         if (!intersections.empty()) {
             partition = leastLoad(intersections);
         } else if (intersections.empty() && !unions.empty()) {
             partition = leastLoad(unions);
-        } else if (first_partition.empty() && !second_partition.empty()) {
-            partition = leastLoad(second_partition);
-        } else if (second_partition.empty() && !first_partition.empty()) {
-            partition = leastLoad(first_partition);
-        } else if (first_partition.empty() && second_partition.empty()){
+        } else if (fp.empty() && !sp.empty()) {
+            partition = leastLoad(fp);
+        } else if (sp.empty() && !fp.empty()) {
+            partition = leastLoad(fp);
+        } else if (fp.empty() && sp.empty()){
             // 找出occupied最小值所在的下标
             int min = occupied[0];
             for (size_t i = 1; i < num_partitions; i++) {
@@ -64,7 +65,10 @@ void GreedyPartitioner::split() {
         }
 
         assign_edge(partition, first, second);
-
+        vertex_partitions[first][partition] = 1;
+        vertex_partitions[second][partition] = 1;
+        fp.insert(partition);
+        sp.insert(partition);
     }
     total_time.stop();
 }
@@ -88,6 +92,4 @@ void GreedyPartitioner::assign_edge(size_t index, vid_t from, vid_t to) {
     is_mirrors[to].set_bit_unsync(index);
     assigned_edges++;
     occupied[index]++;
-    vertex_partitions[from].insert(index);
-    vertex_partitions[to].insert(index);
 }

@@ -60,7 +60,8 @@ private:
     vector<edge_t> off_part;
     vector<edge_t> stream_part;
 
-    vector<set<size_t>> vertex_partitions;
+    vector<vector<int>> vertex_partitions;
+    vector<set<size_t>> vp_set;
 
     double ratio = 0.5;
 

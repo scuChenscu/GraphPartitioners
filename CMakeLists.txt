@@ -39,7 +39,10 @@ add_library(SOURCE_FILES
         algorithms/greedy/greedy.cpp
         algorithms/rand/rand.cpp
         algorithms/adwise/adwise.cpp
-        algorithms/offstremNG/offstreamNG.cpp
+        algorithms/offstreamNG/offstreamNG.cpp
+        algorithms/offstreamNH/offstreamNH.cpp
+        algorithms/offstreamNW/offstreamNW.cpp
+        algorithms/offstreamNWG/offstreamNWG.cpp
         )
 add_executable(GraphPartitioning main.cpp)
 target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)

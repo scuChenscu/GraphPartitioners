@@ -1,17 +1,16 @@
-#include "offstreamNG.hpp"
+#include "offstreamNW.hpp"
 
 using namespace std;
 
 //固定随机数
 // 构造函数
-OffstreamNGPartitioner::OffstreamNGPartitioner(BaseGraph& baseGraph, const string &input, const string &algorithm,
+OffstreamNWPartitioner::OffstreamNWPartitioner(BaseGraph& baseGraph, const string &input, const string &algorithm,
                              size_t num_partitions)
         : EdgePartitioner(baseGraph, algorithm, num_partitions), input(input), gen(985) {
     config_output_files();
     current_partition = 0;
     average_degree = (double) num_edges * 2 / (double) num_vertices;
     assigned_edges = 0;
-    capacity = num_edges * BALANCE_RATIO / num_partitions + 1;
     num_vertices_each_partition.assign(num_partitions, 0);
 
     is_cores.assign(num_partitions, dense_bitset(num_vertices));
@@ -33,14 +32,26 @@ OffstreamNGPartitioner::OffstreamNGPartitioner(BaseGraph& baseGraph, const strin
     off_part = baseGraph.off_part;
 
     vertex_partitions.assign(num_vertices, set<size_t>());
+
+    partial_degrees.resize(num_vertices);
+
+    capacity =  BALANCE_RATIO * (off_part.size() / (double)num_partitions) + 1;
+
+    max_partition_load = (uint64_t) BALANCE_RATIO * num_edges / num_partitions;
+
+    buffer_size = 500;
+
+    edges_buffer.resize(buffer_size);
 }
 
 //最后一个子图就是剩下边组合而成
-void OffstreamNGPartitioner::assign_remaining() {
+void OffstreamNWPartitioner::assign_remaining() {
     auto &is_boundary = is_boundaries[num_partitions - 1], &is_core = is_cores[num_partitions - 1];
     repv(u, num_vertices) for (auto &i: adj_out[u])
             if (edges[i.v].valid()) {
                 assign_edge(num_partitions - 1, u, edges[i.v].second);
+                vertex_partitions[u].insert(num_partitions - 1);
+                vertex_partitions[edges[i.v].second].insert(num_partitions - 1);
                 is_boundary.set_bit_unsync(u);
                 is_boundary.set_bit_unsync(edges[i.v].second);
             }
@@ -56,7 +67,7 @@ void OffstreamNGPartitioner::assign_remaining() {
     }
 }
 
-void OffstreamNGPartitioner::assign_master() {
+void OffstreamNWPartitioner::assign_master() {
     vector<vid_t> count_master(num_partitions, 0);
     vector<vid_t> quota(num_partitions, num_vertices);
     long long sum = num_partitions * num_vertices;
@@ -86,24 +97,27 @@ void OffstreamNGPartitioner::assign_master() {
     }
 }
 
-size_t OffstreamNGPartitioner::count_mirrors() {
+size_t OffstreamNWPartitioner::count_mirrors() {
     size_t result = 0;
     rep(i, num_partitions) result += is_boundaries[i].popcount();
     return result;
 }
 
-void OffstreamNGPartitioner::split() {
+void OffstreamNWPartitioner::split() {
     total_time.start();
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
 
-
+    for(auto &e : off_part) {
+        ++partial_degrees[e.first];
+        ++partial_degrees[e.second];
+    }
 
     LOG(INFO) << "Start NE partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "OffstreamNG" << endl
+    ss << "OffstreamNW" << endl
        << "BALANCE RATIO:" << BALANCE_RATIO
        << endl;
     LOG(INFO) << ss.str();
@@ -150,51 +164,21 @@ void OffstreamNGPartitioner::split() {
     current_partition = num_partitions - 1;
     // 把剩余的边放入最后一个分区
     assign_remaining();
+    repv(j, num_partitions) {
+        LOG(INFO) << "Partition " << j << " Edge Count: " << occupied[j];
+    }
     // 使用贪心来划分
-    LOG(INFO) << "Start greedy partitioning" << endl;
+    LOG(INFO) << "Start window-buffer partitioning" << endl;
+    LOG(INFO) << "max_partition_load: " << max_partition_load;
+
+
     for (auto &edge: stream_part) {
-        vid_t first = edge.first;
-        vid_t second = edge.second;
-        // TODO 这个移动到NE开始维护
-        set<size_t> first_partition = vertex_partitions[first];
-        set<size_t> second_partition = vertex_partitions[second];
-
-        set<size_t> intersections;
-
-        // 使用set_intersection算法求交集
-        set_intersection(first_partition.begin(), first_partition.end(),
-                         second_partition.begin(), second_partition.end(),
-                         inserter(intersections, intersections.begin()));
-
-
-        set<size_t> unions;
-
-        set_union(first_partition.begin(), first_partition.end(),
-                  second_partition.begin(), second_partition.end(),
-                  inserter(intersections, intersections.begin()));
-
-        size_t partition = 0;
-        if (!intersections.empty()) {
-            partition = leastLoad(intersections);
-        } else if (intersections.empty() && !unions.empty()) {
-            partition = leastLoad(unions);
-        } else if (first_partition.empty() && !second_partition.empty()) {
-            partition = leastLoad(second_partition);
-        } else if (second_partition.empty() && !first_partition.empty()) {
-            partition = leastLoad(first_partition);
-        } else if (first_partition.empty() && second_partition.empty()){
-            // 找出occupied最小值所在的下标
-            int min = occupied[0];
-            for (size_t i = 1; i < num_partitions; i++) {
-                if (occupied[i] < min) {
-                    min = occupied[i];
-                    partition = i;
-                }
-            }
-        }
-
-        assign_edge(partition, first, second);
-
+        int partition = find_max_score_partition(edge);
+        is_mirrors[edge.first].set_bit_unsync(partition);
+        is_mirrors[edge.second].set_bit_unsync(partition);
+        occupied[partition]++;
+        assigned_edges++;
+        update_min_max_load(partition);
     }
 
 
@@ -247,9 +231,10 @@ void OffstreamNGPartitioner::split() {
         save_edge(e.second, e.first, tp);
     }
     total_time.stop();
+    LOG(INFO) << without_rep;
 }
 
-void OffstreamNGPartitioner::reindex() {
+void OffstreamNWPartitioner::reindex() {
     // 随机选择顶点，进行广度遍历，重新索引
     vid_t index = 0;
     vid_t vid = dis(gen);
@@ -278,7 +263,57 @@ void OffstreamNGPartitioner::reindex() {
     }
 }
 
-bool OffstreamNGPartitioner::get_target_vertex(vid_t &vid) {
+int OffstreamNWPartitioner::find_max_score_partition(edge_t &e) {
+    auto degree_u = ++partial_degrees[e.first];
+    auto degree_v = ++partial_degrees[e.second];
+
+    uint32_t sum;
+    double max_score = 0;
+    // TODO 这里默认分区为0
+    uint32_t max_p = 0;
+    double bal, gv, gu;
+
+    for (int j = 0; j < num_partitions; j++) {
+        // 如果分区已经超过了最大分区负载，直接跳过
+        if (occupied[j] >= max_partition_load) {
+            continue;
+        }
+        if (max_p == num_partitions) {
+            max_p = j;
+        }
+        // 以下对应着hdrf算法的核心实现
+        gu = 0, gv = 0;
+        sum = degree_u + degree_v;
+        // 归一化
+        if (is_mirrors[e.first].get(j)) {
+            gu = degree_u;
+            gu /= sum;
+            gu = 1 + (1 - gu);
+        }
+        if (is_mirrors[e.second].get(j)) {
+            gv = degree_v;
+            gv /= sum;
+            gv = 1 + (1 - gv);
+        }
+        double rep = gu + gv; // rep值
+        bal = max_load - occupied[j];
+        if (min_load != UINT64_MAX) {
+            bal /= (epsilon + max_load - min_load);
+        }
+        // 计算结果应该有两部分组成，rep和bal
+        // LOG(INFO) << "rep: " << rep << " bal: " << lambda * bal;
+        double score_p = rep + lambda * bal;
+        // LOG(INFO) << "score_p: " << score_p;
+        CHECK_GE(score_p, 0) << "score_p: " << score_p;
+        if (score_p > max_score) {
+            max_score = score_p;
+            max_p = j;
+        }
+    }
+    return max_p;
+}
+
+bool OffstreamNWPartitioner::get_target_vertex(vid_t &vid) {
     // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
     // TODO 以上这个计算不太现实
     // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
@@ -289,7 +324,7 @@ bool OffstreamNGPartitioner::get_target_vertex(vid_t &vid) {
     return true;
 }
 
-bool OffstreamNGPartitioner::get_free_vertex(vid_t &vid) {
+bool OffstreamNWPartitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
     vid = dis(gen);
     vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
@@ -307,7 +342,7 @@ bool OffstreamNGPartitioner::get_free_vertex(vid_t &vid) {
     return true;
 }
 
-void OffstreamNGPartitioner::occupy_vertex(vid_t vid, vid_t d) {
+void OffstreamNWPartitioner::occupy_vertex(vid_t vid, vid_t d) {
     CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
     // 核心集是vector<dense_bitset>，dense_bitset是一个稠密位图
     // 对位图的vid位置置1，表示vid被分配到current_partition分区
@@ -335,7 +370,7 @@ void OffstreamNGPartitioner::occupy_vertex(vid_t vid, vid_t d) {
     adj_in[vid].clear();
 }
 
-size_t OffstreamNGPartitioner::check_edge(const edge_t *e) {
+size_t OffstreamNWPartitioner::check_edge(const edge_t *e) {
     rep (i, current_partition) {
         auto &is_boundary = is_boundaries[i];
         if (is_boundary.get(e->first) && is_boundary.get(e->second) &&
@@ -360,7 +395,7 @@ size_t OffstreamNGPartitioner::check_edge(const edge_t *e) {
     return num_partitions;
 }
 
-void OffstreamNGPartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
+void OffstreamNWPartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
     // TODO 记录哪条边被分配了
     // save_edge(from, to, current_partition);
     true_vids.set_bit_unsync(from);
@@ -373,7 +408,7 @@ void OffstreamNGPartitioner::assign_edge(size_t partition, vid_t from, vid_t to)
     degrees[to]--;
 }
 
-void OffstreamNGPartitioner::add_boundary(vid_t vid) {
+void OffstreamNWPartitioner::add_boundary(vid_t vid) {
     // 获取到当前分区的核心集和边界集
     auto &is_core = is_cores[current_partition];
     auto &is_boundary = is_boundaries[current_partition];
@@ -408,6 +443,8 @@ void OffstreamNGPartitioner::add_boundary(vid_t vid) {
                 if (is_core.get(u)) { // 如果顶点在核心集中
                     assign_edge(current_partition, direction ? vid : u,
                                 direction ? u : vid);
+                    vertex_partitions[u].insert(current_partition);
+                    vertex_partitions[vid].insert(current_partition);
                     min_heap.decrease_key(vid); // 默认移除一条边
                     edges[neighbors[i].v].remove();
                     std::swap(neighbors[i], neighbors.back());
@@ -416,6 +453,8 @@ void OffstreamNGPartitioner::add_boundary(vid_t vid) {
                            occupied[current_partition] < capacity) { // 如果顶点在边界集中，并且当前分区负载没有达到上限
                     // 将边加入边集
                     assign_edge(current_partition, direction ? vid : u, direction ? u : vid);
+                    vertex_partitions[u].insert(current_partition);
+                    vertex_partitions[vid].insert(current_partition);
                     min_heap.decrease_key(vid);
                     min_heap.decrease_key(u);
                     edges[neighbors[i].v].remove();
@@ -432,11 +471,11 @@ void OffstreamNGPartitioner::add_boundary(vid_t vid) {
     }
 }
 
-size_t OffstreamNGPartitioner::leastLoad(set<size_t> set) {
+size_t OffstreamNWPartitioner::leastLoad(set<size_t> partition_set) {
     // 遍历集合元素，找出最小occupied负载
     int min = INT_MAX;
     size_t partition_id;
-    for (auto &partition: set) {
+    for (auto &partition: partition_set) {
         if (occupied[partition] < min) {
             min = occupied[partition];
             partition_id = partition;

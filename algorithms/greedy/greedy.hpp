@@ -24,7 +24,9 @@ class GreedyPartitioner : public EdgePartitioner {
 
 private:
     // 集合
-    vector<set<size_t>> vertex_partitions;
+    vector<vector<int>> vertex_partitions;
+    vector<set<size_t>> vp_set;
+
     size_t leastLoad(set<size_t> set);
     void assign_edge(size_t index, vid_t from, vid_t to);
 
