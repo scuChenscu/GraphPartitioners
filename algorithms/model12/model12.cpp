@@ -33,7 +33,7 @@ Model12Partitioner::Model12Partitioner(BaseGraph& baseGraph, const string &input
     front_factor = 1;
     front_partition = num_partitions * front_factor;
 
-    N = -1;
+    N = 5;
 
 }
 
@@ -153,29 +153,40 @@ void Model12Partitioner::split() {
                     auto iterator = vids.begin();
                     int max = 0;
                     vid = *iterator;
-                    for(int i = 0; i < n; i++){  // 遍历n个最小相同剩余度数的顶点
+                    for(int i = 0; i < n; i++){  // 这一步是遍历n个最小相同剩余度数的顶点
                         vid_t cur = *iterator;
                         int count = 0;
-                        // 计算邻居数
+                        set<vid_t> same_cluster;
+                        int same_cluster_size = 0;
+                        // 对每个候选顶点，遍历他们的邻居
                         rep (direction, 2) {
                             adjlist_t &neighbors = direction ? adj_out[cur] : adj_in[cur];
                             // 遍历顶点的邻边
                             // LOG(INFO) << neighbors.size();
-                            for (size_t idx = 0; idx < neighbors.size(); idx++) { // 对每个候选顶点的一阶邻居
+                            // TODO 判断彼此之间的边，这种是一个定值，可以一次遍历完成计算，不用除以2
+                            for (auto & neighbor : neighbors) { // 对每个候选顶点的一阶邻居
                                 // 判断邻居edges[neighbors[i].v]是否已经分配
-                                if (edges[neighbors[idx].v].valid()) {
+                                if (edges[neighbor.v].valid()) {
                                     // 对这个顶点去找邻居，邻居在边界集合，则计数+1
-                                    vid_t &u = direction ? edges[neighbors[idx].v].second : edges[neighbors[idx].v].first;
+                                    // TODO u是一阶邻居
+                                    vid_t &u = direction ? edges[neighbor.v].second : edges[neighbor.v].first;
+                                    same_cluster.insert(u);
                                     // 对这个V中的顶点去找在候选顶点中的顶点数量
-                                    if (edge_pre_allocation.contains(u)) {
-                                        count = edge_pre_allocation[u].size();
-                                    } else {
+                                    if (edge_pre_allocation.contains(u)) { // 存在，不需要计算
+                                        // TODO 引入一个新的候选顶点到核心顶点，新增的边来自 候选顶点和一阶邻居 以及 一阶邻居和 候选集合/一阶邻居之间的边
+                                        // 正常情况下，是遍历候选顶点的在V中的一阶顶点，判断一阶顶点的邻居有多少是在S中的，要注意彼此之间可能会存在边
+                                        count = edge_pre_allocation[u].size();  // pair中的key-value是什么，key是顶点，value是边还是对端vid
+                                    } else { // 不存在，计算，更新到edge_pre_allocation
+                                        set<vid_t> neighbor_set = edge_pre_allocation[u];
                                         rep(u_direction, 2) {
                                             adjlist_t &u_neighbors = u_direction ? adj_out[u] : adj_in[u];
                                             for (auto & u_neighbor : u_neighbors) {
                                                 if (edges[u_neighbor.v].valid()) {
                                                     vid_t &u_n = u_direction ? edges[u_neighbor.v].second : edges[u_neighbor.v].first;
-
+                                                    if (same_cluster.contains(u_n)) {
+                                                        same_cluster_size++;
+                                                    }
+                                                    neighbor_set.insert(u_n);
                                                     // 这些边都是可以预分配的，不然每次都要重复计算
                                                     // 可是要怎么去实现呢
                                                     // 通过一个map来维护？把已经预计算过的顶点都维护起来，感觉整个过程挺复杂
@@ -193,9 +204,9 @@ void Model12Partitioner::split() {
                                 }
                             }
                         }
-                        if (count > max) {
+                        if (count + same_cluster_size > max) {
                             vid = cur;
-                            max = count;
+                            max = count + same_cluster_size;
                         }
                         iterator++;
                     }
@@ -204,6 +215,10 @@ void Model12Partitioner::split() {
                     // 删除
                     // LOG(INFO) << "Vids first to Remove: " << *degree_vids->second.begin() << endl;
                     // LOG(INFO) << "Remove vid from S: " << vid << ", degree: " << degree << endl;
+                }
+                // TODO vid为被选择加入核心集合，1. 将vid的邻居都从预分配中移除，加入到边集合，2. 判断vid的邻居未被引入的邻居，更新预分配集合；
+                rep (direction, 2) {
+                    adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
                 }
                 degree_map.erase(vid);
                 vids.erase(vid);

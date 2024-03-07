@@ -3,7 +3,7 @@
 RandPartitioner::RandPartitioner(BaseGraph& baseGraph, const string &input, const string& algorithm, size_t num_partitions) : EdgePartitioner(baseGraph, algorithm, num_partitions) {};
 void RandPartitioner::split() {
     stringstream ss;
-    ss << "Greedy" << endl;
+    ss << "rand" << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
 
