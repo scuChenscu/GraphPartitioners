@@ -21,9 +21,9 @@ BnePartitioner::BnePartitioner(BaseGraph& baseGraph, string input, const string 
     front_factor = 1;
     avg_factor = 2.0;
     front_partition = num_partitions * front_factor;
-    count = 5;
-    degree2vertices.resize(avg_degree + 1);
+    candidates = 10;
     threshold = avg_factor * avg_degree;
+    degree2vertices.resize(threshold + 1);
 }
 
 //最后一个子图就是剩下边组合而成
@@ -77,16 +77,25 @@ void BnePartitioner::split() {
                 if (!get_free_vertex(vid)) { // 当V\C已经没有顶点，结束算法
                     break;
                 }
+                // LOG(INFO) << "Random select vid: " << vid;
                 degree = adj_out[vid].size() + adj_in[vid].size();
             } else { // 当S\C不为空时，从S\C，即最小堆的堆顶移出顶点
+                // LOG(INFO) << "Remove from boundary: " << vid;
                 remove(vid, position);
             }
             // 将顶点加入到核心集C
+            // LOG(INFO) << "Add vid: " << vid << " to core";
             occupy_vertex(vid, degree);
         }
+        // 重置
+        LOG(INFO) << "Reset buffer";
         high_min_heap.clear();
-        degree2vertices.clear();
+        for (auto& vertices : degree2vertices) {
+            vertices.clear();
+        }
         vertex2degree.clear();
+        number_of_vertices = 0;
+
         rep(direction, 2) repv(vid, num_vertices) {
                 adjlist_t &neighbors = direction ? adj_out[vid] : adj_in[vid];
                 for (size_t i = 0; i < neighbors.size();) {
@@ -143,9 +152,11 @@ void BnePartitioner::occupy_vertex(vid_t vid, vid_t degree) {
 }
 
 void BnePartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
+    // LOG(INFO) << "Assign edge: " << from << " - " << to;
     is_mirrors[from].set_bit_unsync(partition);
     is_mirrors[to].set_bit_unsync(partition);
     assigned_edges++;
+    // LOG(INFO) << assigned_edges;
     occupied[partition]++;
 }
 
@@ -161,9 +172,12 @@ void BnePartitioner::add_boundary(vid_t vid) {
 
     if (!is_core.get(vid)) {
         vid_t degree = adj_out[vid].size() + adj_in[vid].size();
+        // LOG(INFO) << "Add " << vid << " to boundary, degree: " << degree;
         if (current_partition < front_partition) {
             if (degree < threshold) {
                 unordered_set<vid_t>& vertices = degree2vertices[degree];
+                // LOG(INFO) << "Add " << vid << " to boundary, degree: " << degree;
+                // LOG(INFO) << "Number of vertices: " << vertices.size();
                 vertices.insert(vid);
                 vertex2degree[vid] = degree;
                 number_of_vertices++;
@@ -209,13 +223,15 @@ void BnePartitioner::add_boundary(vid_t vid) {
 }
 
 bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) {
-    if (number_of_vertices == 0 && high_min_heap.size() == 0) return false;
+    if (number_of_vertices == 0 && high_min_heap.size() == 0) {
+        // LOG(INFO) << "No vertices in the B\\C";
+        return false;
+    }
     if (number_of_vertices > 0) {
         for(int d = 1; d < degree2vertices.size(); d++) {
             int size = degree2vertices[d].size();
             if (size > 0) {
-                minIndex = d;
-                if (high_min_heap.get_min(degree,vid) && degree <= minIndex) {
+                if (high_min_heap.get_min(degree,vid) && degree <= d) {
                     // 从high_min_heap获取核心顶点
                     position = 1;
                     return true;
@@ -223,19 +239,30 @@ bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) 
                 // 从degree2vertices获取核心顶点
                 auto &is_core = is_cores[current_partition];
                 auto &is_boundary = is_boundaries[current_partition];
-                int amount = size < count ? size : count; // 对amount个边界顶点计算分数
+                int amount = size < candidates ? size : candidates; // 对candidates个边界顶点计算分数
+                // LOG(INFO) << "Amount: " << amount;
                 unordered_set<vid_t>& vertices = degree2vertices[d];
+                if (amount == 1) {
+                    vid = *vertices.begin();
+                    degree = vertex2degree[vid];
+                    position = 0;
+                    return true;
+                }
                 int max_edges = 0;
                 for (auto it = vertices.begin(); it != vertices.end() && amount > 0; ++it, --amount) {
                     vid_t boundary_vertex = *it; // v为边界顶点，遍历v的邻居，求得引入v作为核心顶点，可以引入的边数量
+                    // LOG(INFO) << "Boundary vertex: " << boundary_vertex;
+
                     int number_of_edges = 0;
                     unordered_set<vid_t> one_hot_neighbor_set;
                     rep (direction, 2) {
                         adjlist_t &one_hot_neighbors = direction ? adj_out[boundary_vertex] : adj_in[boundary_vertex];
+                        // LOG(INFO) << "One hot neighbors size: " << one_hot_neighbors.size();
                         // 遍历顶点的邻边
-                        for (size_t i = 0; i < one_hot_neighbors.size();) {
+                        for (size_t i = 0; i < one_hot_neighbors.size(); i++) {
                             if (edges[one_hot_neighbors[i].v].valid()) {
                                 vid_t &two_hot_neighbor = direction ? edges[one_hot_neighbors[i].v].second : edges[one_hot_neighbors[i].v].first;
+                                // LOG(INFO) << "Two hot neighbor: " << two_hot_neighbor;
                                 // 因为每个的two_hot_neighbor都包含了boundary_vertex，不需要处理
                                 if (is_boundary.get(two_hot_neighbor)) {
                                     number_of_edges++;
@@ -247,17 +274,29 @@ bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) 
                             }
                         }
                     }
+                    // LOG(INFO) << "Number of edges: " << number_of_edges;
                     if (number_of_edges > max_edges) {
+//                        LOG(INFO) << number_of_edges;
+//                        LOG(INFO) << "Max edges: " << max_edges;
                         max_edges = number_of_edges;
                         vid = boundary_vertex;
                         degree = d;
                     }
+                }
+                // LOG(INFO) << "Max edges: " << max_edges;
+                if (max_edges == 0) { // 选择第一个边界顶点
+                    vid = *vertices.begin();
+                    degree = vertex2degree[vid];
+                    // LOG(INFO) << "Select first boundary vertex: " << vid;
                 }
                 position = 0;
                 break;
             }
 
         }
+    } else {
+        high_min_heap.get_min(degree,vid);
+        position = 1;
     }
     return true;
 }
@@ -287,6 +326,7 @@ void BnePartitioner::decrease_key(vid_t vid) {
         } else {
             degree2vertices[degree].insert(vid);
         }
+        vertex2degree[vid] = degree;
     }
 
 }

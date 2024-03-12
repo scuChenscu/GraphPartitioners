@@ -41,11 +41,12 @@ private:
 
     vector<unordered_set<vid_t>> degree2vertices;
     int number_of_vertices = 0;
-    int minIndex = 0;
+    // int minIndex = 0;
+    // 对应在degree2vertices中的度数
     unordered_map<vid_t, vid_t> vertex2degree;
 
     int threshold;
-    int count; // 要计算的个数
+    int candidates; // 要计算的个数
 
     MinHeap<vid_t, vid_t> high_min_heap;
 

@@ -24,11 +24,11 @@ static const double balance_ratio = 1.05;
 static const double EDGE_RATIO = 0.5;
 static const bool need_to_shuffle = true;
 static const string algrithm_type = "offline";
-static const string algorithms[] = {       "bne" };
+static const string algorithms[] = {       "timene" };
 // com-amazon.graph不是强连通图，废弃
 static  const string graph_suffix = "web-Google.graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/dataset";
+const static string input = "../graphs/medium-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
