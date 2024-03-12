@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <set>
-#include <map>
 #include <queue>
 #include "../../utils/dense_bitset.hpp"
 #include "../../utils/graph.hpp"
@@ -22,34 +21,26 @@
 
 using namespace std;
 /* Neighbor Expansion (NE) */
-class Model12Partitioner : public EdgePartitioner {
+class DcnePartitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
 
     unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
-    // TODO 用dense_bitset
-    set<vid_t> v_set; // 重新索引时已经被处理的顶点
     
     queue<vid_t> v_queue;
 
     string input;
 
     size_t current_partition;
-
-    size_t front_partition;
-
-    double average_degree;
-    double average_factor;
-    double front_factor;
     size_t capacity;
 
 
     vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
-    MinHeap<vid_t, vid_t> d; // 顶点的度
 
-    MinHeap<vid_t, vid_t> min_heap;
-    MinHeap<vid_t, vid_t> min_hd;
+    // MinHeap<vid_t, vid_t> min_heap;
+    MinHeap<vid_t, vid_t> high_min_heap;
+    MinHeap<vid_t, vid_t> low_min_heap;
 
     vector<vid_t> degrees;
 
@@ -63,14 +54,9 @@ private:
     //均匀分布区间
     uniform_int_distribution<vid_t> dis;
 
-    map<vid_t, vid_t> degree_map;
-
-    map<vid_t, set<vid_t>> degree_min_heap;
-
-    int N;
-
-    map<vid_t, set<vid_t>> edge_pre_allocation;
-
+    size_t front_partition;
+    double avg_factor;
+    double front_factor;
 
     size_t check_edge(const edge_t *e);
 
@@ -81,6 +67,7 @@ private:
     // 根据算法定义，把顶点加入的核心集时，需要把它的所有边都加入到边集合中
     void occupy_vertex(vid_t vid, vid_t d);
 
+
     bool get_free_vertex(vid_t &vid);
 
     bool get_target_vertex(vid_t &vid);
@@ -90,9 +77,11 @@ private:
     void assign_master();
 
     size_t count_mirrors();
+    bool get_min_value(vid_t & degree, vid_t& vid, vid_t& position);
+    void remove(vid_t vid, vid_t position);
 
 public:
-    Model12Partitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
+    DcnePartitioner(BaseGraph& baseGraph, string  input, const string& algorithm,
                   size_t num_partitions);
     void split() override;
     // 广度遍历，重新索引，用于将顶点分块

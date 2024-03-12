@@ -43,6 +43,9 @@ add_library(SOURCE_FILES
         algorithms/offstreamNH/offstreamNH.cpp
         algorithms/offstreamNW/offstreamNW.cpp
         algorithms/offstreamNWG/offstreamNWG.cpp
+        algorithms/timene/timene.cpp
+        algorithms/dcne/dcne.cpp
+        algorithms/bne/bne.cpp
         )
 add_executable(GraphPartitioning main.cpp)
 target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)

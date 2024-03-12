@@ -136,8 +136,8 @@ void Model11Partitioner::split() {
                     min_heap.remove(vid);
                 } else {
                     vid_t d1 = 0, d2 = 0;
-                    d1 = min_heap.get_min_value();
-                    d2 = min_hd.get_min_value();
+//                    d1 = min_heap.get_min_value();
+//                    d2 = min_hd.get_min_value();
                     // TODO 为什么d1 < d2效果更好
                     if (d1 < d2) {
                         min_heap.get_min(degree, vid);

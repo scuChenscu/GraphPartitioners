@@ -15,7 +15,7 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 64 };
+static const size_t partitions[] = { 32 };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
@@ -24,9 +24,9 @@ static const double balance_ratio = 1.05;
 static const double EDGE_RATIO = 0.5;
 static const bool need_to_shuffle = true;
 static const string algrithm_type = "offline";
-static const string algorithms[] = {       "ne" };
+static const string algorithms[] = {       "bne" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = ".graph";
+static  const string graph_suffix = "web-Google.graph";
 static const bool isShuffle = false;
 const static string input = "../graphs/dataset";
 const static bool REINDEX = false;

@@ -10,11 +10,9 @@ template<typename ValueType, typename KeyType, typename IdxType = vid_t>
 class MinHeap {
 public:
     IdxType n;
-    ValueType total_degree_in_heap;
-    ValueType avg_degree_in_heap;
-    std::vector<std::pair<ValueType, KeyType> > heap;
+    vector<pair<ValueType, KeyType> > heap;
     // 记录每个顶点vid在heap中对应的下标
-    std::vector<IdxType> key2idx;
+    vector<IdxType> key2idx;
 // 构造方法，初始化成员变量n为0，heap为空，key2idx为空。
 public:
     MinHeap() : n(0), heap(), key2idx() {}
@@ -94,37 +92,12 @@ public:
         }
         return true;
     }
-    ValueType get_min_value() {
-        if (n > 0) {
-            return heap[0].first;
-        }
-        return INT64_MAX;
-    }
+
     bool get_min(ValueType &value, KeyType &key) {
         // 如果堆里面有元素，选择堆顶元素，因为堆顶元素引入的新顶点最少
         if (n > 0) {
             value = heap[0].first; // 顶点的度数
             key = heap[0].second; // 顶点的vid
-            return true;
-        } else
-            // 堆为空时，返回false，随机选择顶点
-            return false;
-    }
-    // TODO 递归爆栈
-    bool get_pure_min(ValueType &value, KeyType &key, dense_bitset* dirty_vertices, vector<unordered_map<size_t, edge_t*>>* vertex_adjacent_edges, size_t index) {
-        // 如果堆里面有元素，选择堆顶元素，因为堆顶元素引入的新顶点最少
-        // LOG(INFO) << index << std::endl;
-
-        if (n > 0) {
-            value = heap[0].first; // 顶点的度数
-            key = heap[0].second; // 顶点的vid
-            if (!dirty_vertices->empty() && index > 0) {
-                if (dirty_vertices->get(key)) {
-                    value = vertex_adjacent_edges[key].size(); // 顶点的度数
-                    if (value > 0) return true;
-                    get_pure_min(value, key, dirty_vertices, vertex_adjacent_edges, index);
-                }
-            }
             return true;
         } else
             // 堆为空时，返回false，随机选择顶点
