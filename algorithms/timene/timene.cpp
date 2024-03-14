@@ -8,7 +8,7 @@ using namespace std;
 // 构造函数
 TimernePartitioner::TimernePartitioner(BaseGraph& baseGraph, string input, const string &algorithm,
                              size_t num_partitions)
-        : EdgePartitioner(baseGraph, algorithm, num_partitions), input(std::move(input)), gen(985) {
+        : EdgePartitioner(baseGraph, algorithm, num_partitions), input(std::move(input)), gen(3) {
     config_output_files();
     current_partition = 0;
     assigned_edges = 0;

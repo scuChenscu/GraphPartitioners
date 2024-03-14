@@ -26,9 +26,9 @@ static const bool need_to_shuffle = true;
 static const string algrithm_type = "offline";
 static const string algorithms[] = {       "timene" };
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = "web-Google.graph";
+static  const string graph_suffix = ".graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/medium-scale";
+const static string input = "../graphs/large-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;

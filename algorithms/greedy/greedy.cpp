@@ -29,8 +29,8 @@ void GreedyPartitioner::split() {
         vector<int> first_partition = vertex_partitions[first];
         vector<int> second_partition = vertex_partitions[second];
 
-        set<size_t> fp = vp_set[first];
-        set<size_t> sp = vp_set[second];
+        set<size_t>& fp = vp_set[first];
+        set<size_t>& sp = vp_set[second];
 
 
         set<size_t> intersections;

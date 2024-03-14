@@ -1,4 +1,4 @@
-#include "bne.hpp"
+#include "dpqne.hpp"
 
 #include <utility>
 
@@ -6,7 +6,7 @@ using namespace std;
 
 //固定随机数
 // 构造函数
-BnePartitioner::BnePartitioner(BaseGraph& baseGraph, string input, const string &algorithm,
+DpqnePartitioner::DpqnePartitioner(BaseGraph& baseGraph, string input, const string &algorithm,
                              size_t num_partitions)
         : EdgePartitioner(baseGraph, algorithm, num_partitions), input(std::move(input)), gen(3) {
     config_output_files();
@@ -27,7 +27,7 @@ BnePartitioner::BnePartitioner(BaseGraph& baseGraph, string input, const string 
 }
 
 //最后一个子图就是剩下边组合而成
-void BnePartitioner::assign_remaining() {
+void DpqnePartitioner::assign_remaining() {
     auto &is_boundary = is_boundaries[num_partitions - 1], &is_core = is_cores[num_partitions - 1];
     repv(u, num_vertices) for (auto &i: adj_out[u])
             if (edges[i.v].valid()) {
@@ -47,13 +47,13 @@ void BnePartitioner::assign_remaining() {
     }
 }
 
-size_t BnePartitioner::count_mirrors() {
+size_t DpqnePartitioner::count_mirrors() {
     size_t result = 0;
     rep(i, num_partitions) result += is_boundaries[i].popcount();
     return result;
 }
 
-void BnePartitioner::split() {
+void DpqnePartitioner::split() {
     total_time.start();
     // 初始化最小堆，用于存储S\C的顶点信息
     high_min_heap.reserve(num_vertices);
@@ -62,7 +62,7 @@ void BnePartitioner::split() {
     // 把参数写入文件，NE是边分割算法，计算复制因子
     string current_time = getCurrentTime();
     stringstream ss;
-    ss << "Buffer-NE" << endl
+    ss << "Double-PriorityQueue-NE" << endl
        << "BALANCE RATIO:" << BALANCE_RATIO
        << endl;
     LOG(INFO) << ss.str();
@@ -88,7 +88,7 @@ void BnePartitioner::split() {
             occupy_vertex(vid, degree);
         }
         // 重置
-        LOG(INFO) << "Reset buffer";
+        // LOG(INFO) << "Reset buffer";
         high_min_heap.clear();
         for (auto& vertices : degree2vertices) {
             vertices.clear();
@@ -115,7 +115,7 @@ void BnePartitioner::split() {
     total_time.stop();
 }
 
-bool BnePartitioner::get_free_vertex(vid_t &vid) {
+bool DpqnePartitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
     vid = dis(gen);
     vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
@@ -132,7 +132,7 @@ bool BnePartitioner::get_free_vertex(vid_t &vid) {
     return true;
 }
 
-void BnePartitioner::occupy_vertex(vid_t vid, vid_t degree) {
+void DpqnePartitioner::occupy_vertex(vid_t vid, vid_t degree) {
     CHECK(!is_cores[current_partition].get(vid)) << "add " << vid << " to core again";
     is_cores[current_partition].set_bit_unsync(vid);
     if (degree == 0) return;
@@ -151,7 +151,7 @@ void BnePartitioner::occupy_vertex(vid_t vid, vid_t degree) {
     adj_in[vid].clear();
 }
 
-void BnePartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
+void DpqnePartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
     // LOG(INFO) << "Assign edge: " << from << " - " << to;
     is_mirrors[from].set_bit_unsync(partition);
     is_mirrors[to].set_bit_unsync(partition);
@@ -160,7 +160,7 @@ void BnePartitioner::assign_edge(size_t partition, vid_t from, vid_t to) {
     occupied[partition]++;
 }
 
-void BnePartitioner::add_boundary(vid_t vid) {
+void DpqnePartitioner::add_boundary(vid_t vid) {
     // 获取到当前分区的核心集和边界集
     auto &is_core = is_cores[current_partition];
     auto &is_boundary = is_boundaries[current_partition];
@@ -222,7 +222,7 @@ void BnePartitioner::add_boundary(vid_t vid) {
     }
 }
 
-bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) {
+bool DpqnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) {
     if (number_of_vertices == 0 && high_min_heap.size() == 0) {
         // LOG(INFO) << "No vertices in the B\\C";
         return false;
@@ -236,13 +236,18 @@ bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) 
                     position = 1;
                     return true;
                 }
+                unordered_set<vid_t>& vertices = degree2vertices[d];
+                vid = *vertices.begin();
+                degree = vertex2degree[vid];
+                position = 0;
+                return true;
                 // 从degree2vertices获取核心顶点
                 auto &is_core = is_cores[current_partition];
                 auto &is_boundary = is_boundaries[current_partition];
                 int amount = size < candidates ? size : candidates; // 对candidates个边界顶点计算分数
                 // LOG(INFO) << "Amount: " << amount;
                 // LOG(INFO) << "Min Degree: " << d;
-                unordered_set<vid_t>& vertices = degree2vertices[d];
+                // unordered_set<vid_t>& vertices = degree2vertices[d];
                 if (amount == 1 || d == 1) {
                     vid = *vertices.begin();
                     degree = vertex2degree[vid];
@@ -305,7 +310,7 @@ bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) 
     return true;
 }
 
-void BnePartitioner::remove(vid_t vid, vid_t position) {
+void DpqnePartitioner::remove(vid_t vid, vid_t position) {
     if (position == 0) {
         // 从high_min_heap中移除顶点
         vid_t degree = vertex2degree[vid];
@@ -317,7 +322,7 @@ void BnePartitioner::remove(vid_t vid, vid_t position) {
     }
 }
 
-void BnePartitioner::decrease_key(vid_t vid) {
+void DpqnePartitioner::decrease_key(vid_t vid) {
     if (high_min_heap.contains(vid)) {
         high_min_heap.decrease_key(vid); // 默认移除一条边
     } else {

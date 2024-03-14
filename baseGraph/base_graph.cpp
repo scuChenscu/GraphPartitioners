@@ -27,6 +27,7 @@
 #include "../algorithms/timene/timene.hpp"
 #include "../algorithms/dcne/dcne.hpp"
 #include "../algorithms/bne/bne.hpp"
+#include "../algorithms/dpqne/dpqne.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
@@ -276,6 +277,10 @@ void BaseGraph::partition() {
             partitioners.push_back(partitioner);
         } else if (algorithm == "bne") {
                 partitioner = new BnePartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "dpqne") {
+                partitioner = new DpqnePartitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
             }
 

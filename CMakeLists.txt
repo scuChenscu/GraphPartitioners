@@ -46,6 +46,7 @@ add_library(SOURCE_FILES
         algorithms/timene/timene.cpp
         algorithms/dcne/dcne.cpp
         algorithms/bne/bne.cpp
+        algorithms/dpqne/dpqne.cpp
         )
 add_executable(GraphPartitioning main.cpp)
 target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
