@@ -67,8 +67,8 @@ int main() {
             delete converter;
 
             auto *baseGraph = new BaseGraph(graph_name);
-            baseGraph->partition();
-            LOG(INFO) << "Finish partition on " << graph_name << endl;
+//            baseGraph->partition();
+//            LOG(INFO) << "Finish partition on " << graph_name << endl;
             delete baseGraph;
         }
     }

@@ -31,6 +31,9 @@
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
+    total_time.start();
+
+    load_time.start();
     this->graph_name = graph_name;
     ifstream fin;
     if (need_to_shuffle) {
@@ -64,6 +67,9 @@ BaseGraph::BaseGraph(const string& graph_name) {
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
+    load_time.stop();
+
+    preprocess_time.start();
     if (algrithm_type == "offstream") {
         // 将edges分为两个集合
         size_t size = edges.size();
@@ -94,20 +100,19 @@ BaseGraph::BaseGraph(const string& graph_name) {
     dis.param(
             std::uniform_int_distribution<vid_t>::param_type(0, num_vertices - 1));
     visited = dense_bitset(num_vertices);
-    indices.resize(num_vertices);
+    // indices.resize(num_vertices);
     reverse_indices.resize(num_vertices);
 
     construct_adjacency_list();
-
-    // 重新索引
-    if (REINDEX) {
-        LOG(INFO) << "re_index" << endl;
-        re_index();
-    } else {
-        for (int i = 0; i < num_vertices;i++) {
-            indices[i] = i;
-        }
-    }
+    preprocess_time.stop();
+    total_time.stop();
+    LOG(INFO) << "Load time: " << load_time.get_time() << endl;
+    LOG(INFO) << "Preprocess time: " << preprocess_time.get_time() << endl;
+    LOG(INFO) << "Total time: " << total_time.get_time() << endl;
+   // 重新索引
+//    for (int i = 0; i < num_vertices; i++) {
+//        indices[i] = i;
+//    }
 
 
 }

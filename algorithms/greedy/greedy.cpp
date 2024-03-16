@@ -6,7 +6,7 @@ GreedyPartitioner::GreedyPartitioner(BaseGraph& baseGraph,
                                      const string &algorithm,
                                      size_t num_partitions) : EdgePartitioner(baseGraph, algorithm, num_partitions){
     vertex_partitions.assign(num_vertices, vector<int>(num_partitions));
-    vp_set.assign(num_vertices, set<size_t>());
+    vp_set.assign(num_vertices, dense_bitset(num_partitions));
 }
 
 //贪心策略 Greedy,定义了针对不同类型的边的划分
@@ -15,6 +15,7 @@ GreedyPartitioner::GreedyPartitioner(BaseGraph& baseGraph,
 // 3) 两个端点都在分区中,且存在于同一个分区中,将边分配到共同分区中;
 // 4) 两个端点都在分区中,但不在同一个分区中,将边分配到这些分区中负载最小的分区
 void GreedyPartitioner::split() {
+
     stringstream ss;
     ss << "Greedy" << endl;
     LOG(INFO) << ss.str();
@@ -25,35 +26,30 @@ void GreedyPartitioner::split() {
     for (auto &edge: edges) {
         vid_t first = edge.first;
         vid_t second = edge.second;
-
-        vector<int> first_partition = vertex_partitions[first];
-        vector<int> second_partition = vertex_partitions[second];
-
-        set<size_t>& fp = vp_set[first];
-        set<size_t>& sp = vp_set[second];
-
-
-        set<size_t> intersections;
-        set<size_t> unions;
+        vector<int>& first_partition = vertex_partitions[first];
+        vector<int>& second_partition = vertex_partitions[second];
+        dense_bitset& fp = vp_set[first];
+        dense_bitset& sp = vp_set[second];
+        dense_bitset intersections = dense_bitset(num_partitions);
+        dense_bitset unions = dense_bitset(num_partitions);
         for (int i = 0; i < num_partitions; i++) {
             if (first_partition[i] == 1 && second_partition[i] == 1) {
-                intersections.insert(i);
+                intersections.set_bit_unsync(i);
             }
             if (first_partition[i] == 1 || second_partition[i] == 1) {
-                unions.insert(i);
+                unions.set_bit_unsync(i);
             }
         }
-
         size_t partition = 0;
         if (!intersections.empty()) {
             partition = leastLoad(intersections);
         } else if (intersections.empty() && !unions.empty()) {
             partition = leastLoad(unions);
         } else if (fp.empty() && !sp.empty()) {
-            partition = leastLoad(fp);
+            partition = leastLoad(sp);
         } else if (sp.empty() && !fp.empty()) {
             partition = leastLoad(fp);
-        } else if (fp.empty() && sp.empty()){
+        } else {
             // 找出occupied最小值所在的下标
             int min = occupied[0];
             for (size_t i = 1; i < num_partitions; i++) {
@@ -67,21 +63,30 @@ void GreedyPartitioner::split() {
         assign_edge(partition, first, second);
         vertex_partitions[first][partition] = 1;
         vertex_partitions[second][partition] = 1;
-        fp.insert(partition);
-        sp.insert(partition);
+        fp.set_bit_unsync(partition);
+        sp.set_bit_unsync(partition);
     }
     total_time.stop();
 }
-size_t GreedyPartitioner::leastLoad(set<size_t> set) {
+size_t GreedyPartitioner::leastLoad(const dense_bitset& bitmap) {
     // 遍历集合元素，找出最小occupied负载
     int min = INT_MAX;
     size_t partition_id;
-    for (auto &partition: set) {
-        if (occupied[partition] < min) {
-            min = occupied[partition];
-            partition_id = partition;
+    for (int partition = 0; partition < num_partitions; partition++) {
+        if (bitmap.get(partition)) {
+            if (occupied[partition] < min) {
+                min = occupied[partition];
+                partition_id = partition;
+            }
         }
     }
+//    }
+//    for (auto &partition : bitmap) {
+//        if (occupied[partition] < min) {
+//            min = occupied[partition];
+//            partition_id = partition;
+//        }
+//    }
     return partition_id;
 }
 

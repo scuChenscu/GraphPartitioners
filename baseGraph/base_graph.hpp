@@ -15,7 +15,7 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = { 32 };
+static const size_t partitions[] = { 128,256 };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
@@ -28,7 +28,7 @@ static const string algorithms[] = {       "timene" };
 // com-amazon.graph不是强连通图，废弃
 static  const string graph_suffix = ".graph";
 static const bool isShuffle = false;
-const static string input = "../graphs/large-scale";
+const static string input = "../graphs/dataset";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;
@@ -80,6 +80,9 @@ public:
 
     vector<edge_t> off_part;
     vector<edge_t> stream_part;
+    Timer total_time;
+    Timer load_time;
+    Timer preprocess_time;
 
 
     // 构造函数

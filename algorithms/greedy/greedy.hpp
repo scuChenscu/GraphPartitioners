@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 #include <unordered_set>
+#include <bitset>
 #include "../../partitioner/partitioner.hpp"
 #include "../../utils/dense_bitset.hpp"
 #include "../../utils/util.hpp"
@@ -25,9 +26,10 @@ class GreedyPartitioner : public EdgePartitioner {
 private:
     // 集合
     vector<vector<int>> vertex_partitions;
-    vector<set<size_t>> vp_set;
+    vector<dense_bitset> vp_set;
 
-    size_t leastLoad(set<size_t> set);
+
+    size_t leastLoad(const dense_bitset& bitmap);
     void assign_edge(size_t index, vid_t from, vid_t to);
 
 public:

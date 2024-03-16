@@ -88,7 +88,7 @@ void BnePartitioner::split() {
             occupy_vertex(vid, degree);
         }
         // 重置
-        LOG(INFO) << "Reset buffer";
+        // LOG(INFO) << "Reset buffer";
         high_min_heap.clear();
         for (auto& vertices : degree2vertices) {
             vertices.clear();
@@ -279,9 +279,9 @@ bool BnePartitioner::get_min_value(vid_t & degree, vid_t& vid, vid_t& position) 
 //                        LOG(INFO) << "Number of edges: " << number_of_edges;
 //                    }
                     if (number_of_edges > max_edges) {
-                        if (max_edges > 0) {
-                            LOG(INFO) << "Max edges: " << max_edges;
-                        }
+//                        if (max_edges > 0) {
+//                            LOG(INFO) << "Max edges: " << max_edges;
+//                        }
                         max_edges = number_of_edges;
                         vid = boundary_vertex;
                         degree = d;

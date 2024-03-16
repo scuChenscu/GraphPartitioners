@@ -61,7 +61,7 @@ private:
     vector<edge_t> stream_part;
 
     vector<vector<int>> vertex_partitions;
-    vector<set<size_t>> vp_set;
+    vector<dense_bitset> vp_set;
 
     double ratio = 0.5;
 
@@ -85,7 +85,7 @@ private:
 
     size_t count_mirrors();
 
-    size_t leastLoad(set<size_t> set);
+    size_t leastLoad(const dense_bitset& bitmap);
 
 public:
     OffstreamNGPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
