@@ -51,6 +51,7 @@ int main() {
             string graph_name = entry.path().string();
             string name = graph_name.substr(0, graph_name.size() - 6);
             // 判断是否为.graph类型文件
+
             int len = graph_suffix.length();
             string substring = graph_name.substr(graph_name.size() - len, len);
             if (substring != graph_suffix) continue;
@@ -67,8 +68,8 @@ int main() {
             delete converter;
 
             auto *baseGraph = new BaseGraph(graph_name);
-//            baseGraph->partition();
-//            LOG(INFO) << "Finish partition on " << graph_name << endl;
+            baseGraph->partition();
+            LOG(INFO) << "Finish partition on " << graph_name << endl;
             delete baseGraph;
         }
     }
