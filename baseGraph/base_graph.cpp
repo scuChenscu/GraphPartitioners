@@ -28,6 +28,7 @@
 #include "../algorithms/dcne/dcne.hpp"
 #include "../algorithms/bne/bne.hpp"
 #include "../algorithms/dpqne/dpqne.hpp"
+#include "../algorithms/offstreamNA/offstreamNA.hpp"
 using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
@@ -63,6 +64,7 @@ BaseGraph::BaseGraph(const string& graph_name) {
     edges.resize(num_edges);
     degrees.resize(num_vertices, 0);
     true_vids.resize(num_vertices);
+    partial_degree.resize(num_vertices, 0);
 
     fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
     adj_out.resize(num_vertices);
@@ -70,19 +72,26 @@ BaseGraph::BaseGraph(const string& graph_name) {
     load_time.stop();
 
     preprocess_time.start();
-    if (algrithm_type == "offstream") {
+    LOG(INFO)  << "Algorithm_Type: " << algorithm_type << ", Edge Ratio: " << EDGE_RATIO << endl;
+    if (algorithm_type == "offstream") {
         // 将edges分为两个集合
         size_t size = edges.size();
         size_t halfSize = size * EDGE_RATIO; // 整数除法得到一半大小
         if (size % 2 != 0) {
             ++halfSize; // 如果总数是奇数，则第二个向量多一个元素
         }
-
+        LOG(INFO) << "Memory Partitioning Size: " << halfSize << ", Stream Partitioning Size: " << (size - halfSize);
         off_part.reserve(halfSize);
         stream_part.reserve(size - halfSize);
 
         std::copy(edges.begin(), edges.begin() + halfSize, std::back_inserter(off_part));
         std::copy(edges.begin() + halfSize, edges.end(), std::back_inserter(stream_part));
+
+        for(size_t i = 0; i < off_part.size(); i++) {
+            auto& edge = off_part[i];
+            partial_degree[edge.first]++;
+            partial_degree[edge.second]++;
+        }
 
         CHECK_EQ(edges.size(), off_part.size() + stream_part.size()) << "edges no equals!";
 
@@ -118,7 +127,7 @@ BaseGraph::BaseGraph(const string& graph_name) {
 }
 // TODO 建立CSR
 void BaseGraph::construct_adjacency_list() {
-    LOG(INFO) << "Construct adjacency list..." << endl;
+    // LOG(INFO) << "Construct adjacency list..." << endl;
     // 遍历边集，建立每个顶点的邻居集合
     for (auto &edge: edges) {
         // 计算顶点度数
@@ -151,7 +160,7 @@ void BaseGraph::construct_adjacency_list() {
         } else if (degrees[i] < min_degree) {
             min_degree = degrees[i];
         }
-        total_degree += degrees[i];
+        total_degree += (long long)degrees[i];
     }
     LOG(INFO) << "total degree: " << total_degree << " , num_vertices: " << num_vertices << endl;
     avg_degree = (double)total_degree / (double )num_vertices;
@@ -274,7 +283,12 @@ void BaseGraph::partition() {
         }   else if (algorithm == "offstreamNWG") {
             partitioner = new OffstreamNWGPartitioner(*this, graph_name, algorithm, num_partitions);
             partitioners.push_back(partitioner);
-        } else if (algorithm == "timene") {
+        }
+            else if (algorithm == "offstreamNA") {
+                partitioner = new OffstreamNAPartitioner(*this, graph_name, algorithm, num_partitions);
+                partitioners.push_back(partitioner);
+            }
+            else if (algorithm == "timene") {
                 partitioner = new TimernePartitioner(*this, graph_name, algorithm, num_partitions);
                 partitioners.push_back(partitioner);
         } else if (algorithm == "dcne") {

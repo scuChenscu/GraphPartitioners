@@ -21,7 +21,7 @@
 
 using namespace std;
 /* Neighbor Expansion (NE) */
-class TimernePartitioner : public EdgePartitioner {
+class OffstreamNAPartitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
 
@@ -44,6 +44,19 @@ private:
     vector<int8_t> master;
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
+
+    vector<edge_t> off_part;
+    vector<edge_t> stream_part;
+
+    // 需要维护的状态
+    vector<edge_t> window;
+
+    unordered_set<vid_t> edges_in_window;
+    vector<size_t> partial_degree;
+
+    vector<vector<size_t>> vertex_partitions;
+    vector<dense_bitset> vp_set;
+
 
     //随机数生成器
     //std::random_device rd;
@@ -72,7 +85,7 @@ private:
     size_t count_mirrors();
 
 public:
-    TimernePartitioner(BaseGraph& baseGraph, string  input, const string& algorithm,
+    OffstreamNAPartitioner(BaseGraph& baseGraph, string  input, const string& algorithm,
                   size_t num_partitions);
     void split() override;
     // 广度遍历，重新索引，用于将顶点分块
