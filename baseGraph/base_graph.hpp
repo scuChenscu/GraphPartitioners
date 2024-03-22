@@ -15,22 +15,22 @@
 using namespace std;
 
 // int partitions[] = {2, 4, 8, 16, 32, 64};
-static const size_t partitions[] = {  2  };
+static const size_t partitions[] = {  8  };
 // int partitions[] = {64};
 static const int memory_size = 4096;
 static const double lambda = 1.1;
 static const double balance_ratio = 1.05;
 // const string algorithms[] = {"ne", "dbh", "hdrf", "ldg", "fennel"};
-static const double EDGE_RATIO = 0.1;
-static const size_t WINDOW_SIZE = 500;
-static const bool need_to_shuffle = false;
+static const double EDGE_RATIO = 0.2;
+static const size_t WINDOW_SIZE = 1;
+static const bool need_to_shuffle = true;
 static const string algorithm_type = "offstream";
 static const string algorithms[] = {       "offstreamNA" };
 static const string stream_orders[] = { "random", "bfs", "dfs"};
 // com-amazon.graph不是强连通图，废弃
-static  const string graph_suffix = "as-skitter.graph";
-static const bool isShuffle = false;
-const static string input = "../graphs/dataset";
+static  const string graph_suffix = "copter2.graph";
+// static const bool isShuffle = false;
+const static string input = "../graphs/small-scale";
 const static bool REINDEX = false;
 // Ours参数
 static const bool SELF = true;

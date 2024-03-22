@@ -34,7 +34,6 @@ private:
     string input;
 
     size_t current_partition;
-    double average_degree;
     size_t capacity;
 
     int without_rep = 0;
@@ -63,7 +62,10 @@ private:
 
     vector<set<size_t>> vertex_partitions;
 
-    vector<vid_t> partial_degrees;
+//    vector<vid_t> partial_degrees;
+
+    vector<size_t> partial_degree;
+
 
     double ratio = 0.5;
 

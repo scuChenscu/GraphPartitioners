@@ -35,7 +35,6 @@ private:
     size_t capacity;
 
 
-    vector<vector<vid_t> > part_degrees;
     vector<int> balance_vertex_distribute;
 
     MinHeap<vid_t, vid_t> min_heap;
@@ -43,7 +42,7 @@ private:
 
     vector<int8_t> master;
     vector<dense_bitset> is_cores, is_boundaries;
-    dense_bitset true_vids;
+    // dense_bitset true_vids;
 
     vector<edge_t> off_part;
     vector<edge_t> stream_part;
@@ -52,17 +51,25 @@ private:
     vector<edge_t> window;
 
     unordered_set<vid_t> edges_in_window;
+    // 第一次访问边的时候更新
     vector<size_t> partial_degree;
-
+    // 每个顶点在分区的邻居数目
     vector<vector<size_t>> vertex_partitions;
+    // 每个顶点在分区是否有副本
     vector<dense_bitset> vp_set;
+    // is_mirrors 每个分区的顶点副本
+//    size_t max_load;
+//    size_t min_load;
 
+    const double epsilon = 1;
 
     //随机数生成器
     //std::random_device rd;
     mt19937 gen;
     //均匀分布区间
     uniform_int_distribution<vid_t> dis;
+
+    uint64_t max_partition_load;
 
     size_t check_edge(const edge_t *e);
 
@@ -83,6 +90,12 @@ private:
     void assign_master();
 
     size_t count_mirrors();
+    double calculate_lb_score(size_t partition_id);
+    double calculate_rf_score(vid_t v, vid_t u, size_t p);
+    double calculate_cs_score(vid_t v, vid_t u, size_t p);
+    void remove_edge_from_window();
+    void add_edge_to_window(edge_t& edge);
+    int find_max_score_partition(edge_t &e);
 
 public:
     OffstreamNAPartitioner(BaseGraph& baseGraph, string  input, const string& algorithm,

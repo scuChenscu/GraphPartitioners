@@ -50,6 +50,7 @@ private:
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
 
+
     //随机数生成器
     //std::random_device rd;
     mt19937 gen;

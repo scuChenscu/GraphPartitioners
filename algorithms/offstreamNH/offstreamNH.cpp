@@ -9,8 +9,11 @@ OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, const strin
         : EdgePartitioner(baseGraph, algorithm, num_partitions), input(input), gen(985) {
     config_output_files();
     current_partition = 0;
-    average_degree = (double) num_edges * 2 / (double) num_vertices;
+    // average_degree = (double) num_edges * 2 / (double) num_vertices;
     assigned_edges = 0;
+
+    partial_degree = baseGraph.partial_degree;
+
     num_vertices_each_partition.assign(num_partitions, 0);
 
     is_cores.assign(num_partitions, dense_bitset(num_vertices));
@@ -33,7 +36,7 @@ OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, const strin
 
     vertex_partitions.assign(num_vertices, set<size_t>());
 
-    partial_degrees.resize(num_vertices);
+//    partial_degrees.resize(num_vertices);
 
     capacity =  BALANCE_RATIO * (off_part.size() / (double)num_partitions) + 1;
 
@@ -104,10 +107,6 @@ void OffstreamNHPartitioner::split() {
     // 初始化最小堆，用于存储S\C的顶点信息
     min_heap.reserve(num_vertices);
 
-    for(auto &e : off_part) {
-        ++partial_degrees[e.first];
-        ++partial_degrees[e.second];
-    }
 
     LOG(INFO) << "Start NE partitioning...";
     // 把参数写入文件，NE是边分割算法，计算复制因子
@@ -163,6 +162,10 @@ void OffstreamNHPartitioner::split() {
     repv(j, num_partitions) {
         LOG(INFO) << "Partition " << j << " Edge Count: " << occupied[j];
     }
+
+    min_load = *min_element(occupied.begin(), occupied.end());
+    max_load = *max_element(occupied.begin(), occupied.end());
+
     // 使用贪心来划分
     LOG(INFO) << "Start hdrf partitioning" << endl;
     LOG(INFO) << "max_partition_load: " << max_partition_load;
@@ -260,8 +263,8 @@ void OffstreamNHPartitioner::reindex() {
 }
 
 int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
-    auto degree_u = ++partial_degrees[e.first];
-    auto degree_v = ++partial_degrees[e.second];
+    auto degree_u = ++partial_degree[e.first];
+    auto degree_v = ++partial_degree[e.second];
 
     uint32_t sum;
     double max_score = 0;
@@ -322,16 +325,17 @@ bool OffstreamNHPartitioner::get_target_vertex(vid_t &vid) {
 
 bool OffstreamNHPartitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
-    vid = dis(gen);
+    size_t index = dis(gen);
+    vid  = index;
     vid_t count = 0; // 像是一个随机数，用来帮助选择随机顶点
     //TODO 什么叫已经超出平衡范围
     //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
     while (count < num_vertices &&
            (adj_out[vid].size() + adj_in[vid].size() == 0 ||
             adj_out[vid].size() + adj_in[vid].size() >
-            2 * average_degree ||
+            2 * avg_degree ||
             is_cores[current_partition].get(vid))) {
-        vid = (vid + ++count) % num_vertices;
+        vid = (index + ++count) % num_vertices;
     }
     if (count == num_vertices)
         return false;
@@ -379,9 +383,9 @@ size_t OffstreamNHPartitioner::check_edge(const edge_t *e) {
         auto &is_core = is_cores[i], &is_boundary = is_boundaries[i];
         if ((is_core.get(e->first) || is_core.get(e->second)) &&
             occupied[i] < capacity) {
-            if (is_core.get(e->first) && degrees[e->second] > average_degree)
+            if (is_core.get(e->first) && degrees[e->second] > avg_degree)
                 continue;
-            if (is_core.get(e->second) && degrees[e->first] > average_degree)
+            if (is_core.get(e->second) && degrees[e->first] > avg_degree)
                 continue;
             is_boundary.set_bit(e->first);
             is_boundary.set_bit(e->second);
@@ -396,8 +400,10 @@ void OffstreamNHPartitioner::assign_edge(size_t partition, vid_t from, vid_t to)
     // save_edge(from, to, current_partition);
     true_vids.set_bit_unsync(from);
     true_vids.set_bit_unsync(to);
+
     is_mirrors[from].set_bit_unsync(partition);
     is_mirrors[to].set_bit_unsync(partition);
+
     assigned_edges++;
     occupied[partition]++;
     degrees[from]--;

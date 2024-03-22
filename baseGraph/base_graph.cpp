@@ -254,19 +254,19 @@ void BaseGraph::partition() {
                 partitioners.push_back(partitioner);
             } else if (algorithm == "hdrf") {
                 partitioner = new HdrfPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
-                                                  balance_ratio, lambda, isShuffle);
+                                                  balance_ratio, lambda, need_to_shuffle);
                 partitioners.push_back(partitioner);
             } else if (algorithm == "adwise") {
                 partitioner = new AdwisePartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
-                                                  balance_ratio, lambda, isShuffle);
+                                                  balance_ratio, lambda, need_to_shuffle);
                 partitioners.push_back(partitioner);
             }
             else if (algorithm == "ldg") {
-                partitioner = new LdgPartitioner(*this, graph_name, algorithm, num_partitions, memory_size, isShuffle);
+                partitioner = new LdgPartitioner(*this, graph_name, algorithm, num_partitions, memory_size, need_to_shuffle);
                 partitioners.push_back(partitioner);
             } else if (algorithm == "fennel") {
                 partitioner = new FennelPartitioner(*this, graph_name, algorithm, num_partitions, memory_size,
-                                                    isShuffle);
+                                                    need_to_shuffle);
                 partitioners.push_back(partitioner);
             } else if (algorithm == "greedy") {
                 partitioner = new GreedyPartitioner(*this, graph_name, algorithm, num_partitions);

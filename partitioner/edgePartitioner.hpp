@@ -63,7 +63,7 @@ protected:
 
     void print_partition_edges();
 
-    void update_min_max_load(int max_p) {
+    void update_min_max_load(size_t max_p) {
         auto &load = occupied[max_p];
         if (load > max_load) max_load = load;
         min_load = *min_element(occupied.begin(), occupied.end());
