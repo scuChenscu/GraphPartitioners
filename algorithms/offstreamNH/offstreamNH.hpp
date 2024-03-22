@@ -68,7 +68,6 @@ private:
 
 
     double ratio = 0.5;
-
     const double epsilon = 1;
 
     uint64_t max_partition_load;
@@ -96,6 +95,9 @@ private:
     size_t leastLoad(set<size_t> set);
 
     int find_max_score_partition(edge_t &e);
+
+    double calculate_lb_score(size_t partition_id);
+    double calculate_rf_score(vid_t v, vid_t u, size_t p);
 
 public:
     OffstreamNHPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,

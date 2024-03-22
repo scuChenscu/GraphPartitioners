@@ -155,26 +155,27 @@ void OffstreamNAPartitioner::split() {
     size_t i = 0;
     size_t remove_count = 0;
     // TODO 只移除了一半的边
-//    while(i < on_size) {
-//        auto& edge = stream_part[i++];
-//        if (window.size() == WINDOW_SIZE) {
-//            remove_edge_from_window();
-//        }
-//        add_edge_to_window(edge);
-//    }
-//    LOG(INFO) << "Window assign edges when stream end: " << remove_count;
-//    LOG(INFO) << "Remaining edges in window: " << window.size();
-//    while(!window.empty()) { // 每次移除一条边就重复计算剩余所有边
-//        remove_edge_from_window();
-//    }
-    for (auto &edge: stream_part) {
-        int partition = find_max_score_partition(edge);
-        is_mirrors[edge.first].set_bit_unsync(partition);
-        is_mirrors[edge.second].set_bit_unsync(partition);
-        occupied[partition]++;
-        assigned_edges++;
-        update_min_max_load(partition);
+    while(i < on_size) {
+        auto& edge = stream_part[i++];
+        if (window.size() == WINDOW_SIZE) {
+            remove_edge_from_window();
+        }
+        add_edge_to_window(edge);
     }
+    LOG(INFO) << "Window assign edges when stream end: " << remove_count;
+    LOG(INFO) << "Remaining edges in window: " << window.size();
+    while(!window.empty()) { // 每次移除一条边就重复计算剩余所有边
+        remove_edge_from_window();
+    }
+
+//    for (auto &edge: stream_part) {
+//        int partition = find_max_score_partition(edge);
+//        is_mirrors[edge.first].set_bit_unsync(partition);
+//        is_mirrors[edge.second].set_bit_unsync(partition);
+//        occupied[partition]++;
+//        assigned_edges++;
+//        update_min_max_load(partition);
+//    }
     stream_time.stop();
 
 
@@ -266,14 +267,13 @@ double OffstreamNAPartitioner::calculate_lb_score(size_t partition_id) {
         lb_score /= (epsilon + (double)max_load - (double)min_load);
     }
 
-    update_min_max_load(partition_id);
     return lb_score;
 }
 
 double OffstreamNAPartitioner::calculate_rf_score(vid_t u, vid_t v, size_t partition_id) {
     double gu = 0, gv = 0;
-    size_t v_degree = partial_degree[u];
-    size_t u_degree = partial_degree[v];
+    size_t u_degree = partial_degree[u];
+    size_t v_degree = partial_degree[v];
     size_t sum = v_degree + u_degree;
     // 归一化
     if (is_mirrors[u].get(partition_id)) {
@@ -344,7 +344,7 @@ void OffstreamNAPartitioner::remove_edge_from_window() {
     Timer buffer_calculate_cost;
     buffer_calculate_cost.start();
 
-    double global_max_score = -0.1;
+    double global_max_score = -0.2;
     size_t global_max_partition = 0;
     edge_t global_max_edge;
     size_t global_max_index = 0;
@@ -358,12 +358,19 @@ void OffstreamNAPartitioner::remove_edge_from_window() {
         size_t local_max_partition = 0;
         size_t local_max_index = 0;
         for(int p = 0; p < num_partitions; p++) {
+            if (occupied[p] >= max_partition_load) {
+                continue;
+            }
+            if (local_max_partition == num_partitions) {
+                local_max_partition = p;
+            }
+
             // 计算三部分的分数
             double lb_score = calculate_lb_score(p);
             double rf_score = calculate_rf_score(u,v,p);
             double cs_score = calculate_cs_score(u, v, p);
             // LOG(INFO) << "lb_score: " << lb_score << " rf_score: " << rf_score << " | cs_score: " << cs_score;
-            double local_score = lambda * lb_score + rf_score;
+            double local_score = lambda * lb_score + rf_score + cs_score;
             if (local_score > local_max_score) {
                 local_max_partition = p;
                 local_max_score = local_score;
@@ -380,8 +387,10 @@ void OffstreamNAPartitioner::remove_edge_from_window() {
     // 将边分配到分区
     assign_edge(global_max_partition, global_max_edge.first, global_max_edge.second);
     // 从缓存窗口移除边
+    update_min_max_load(global_max_partition);
     window[global_max_index] = window.back();
     window.pop_back();
+
     buffer_calculate_cost.stop();
     // LOG(INFO) << "Buffer calculate cost time: " << buffer_calculate_cost.get_time();
 }
@@ -444,8 +453,8 @@ void OffstreamNAPartitioner::add_boundary(vid_t vid) {
 }
 
 int OffstreamNAPartitioner::find_max_score_partition(edge_t &e) {
-    auto degree_u = ++partial_degree[e.first];
-    auto degree_v = ++partial_degree[e.second];
+    auto degree_u = partial_degree[e.first];
+    auto degree_v = partial_degree[e.second];
 
     uint32_t sum;
     double max_score = 0;

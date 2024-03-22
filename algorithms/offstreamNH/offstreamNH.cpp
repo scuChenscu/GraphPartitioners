@@ -281,27 +281,27 @@ int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
             max_p = j;
         }
         // 以下对应着hdrf算法的核心实现
-        gu = 0, gv = 0;
-        sum = degree_u + degree_v;
-        // 归一化
-        if (is_mirrors[e.first].get(j)) {
-            gu = degree_u;
-            gu /= sum;
-            gu = 1 + (1 - gu);
-        }
-        if (is_mirrors[e.second].get(j)) {
-            gv = degree_v;
-            gv /= sum;
-            gv = 1 + (1 - gv);
-        }
-        double rep = gu + gv; // rep值
-        bal = max_load - occupied[j];
-        if (min_load != UINT64_MAX) {
-            bal /= (epsilon + max_load - min_load);
-        }
+//        gu = 0, gv = 0;
+//        sum = degree_u + degree_v;
+//        // 归一化
+//        if (is_mirrors[e.first].get(j)) {
+//            gu = degree_u;
+//            gu /= sum;
+//            gu = 1 + (1 - gu);
+//        }
+//        if (is_mirrors[e.second].get(j)) {
+//            gv = degree_v;
+//            gv /= sum;
+//            gv = 1 + (1 - gv);
+//        }
+//        double rep = gu + gv; // rep值
+//        bal = max_load - occupied[j];
+//        if (min_load != UINT64_MAX) {
+//            bal /= (epsilon + max_load - min_load);
+//        }
         // 计算结果应该有两部分组成，rep和bal
         // LOG(INFO) << "rep: " << rep << " bal: " << lambda * bal;
-        double score_p = rep + lambda * bal;
+        double score_p = calculate_rf_score(e.first, e.second, j) + lambda * calculate_lb_score(j);
         // LOG(INFO) << "score_p: " << score_p;
         CHECK_GE(score_p, 0) << "score_p: " << score_p;
         if (score_p > max_score) {
@@ -310,6 +310,36 @@ int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
         }
     }
     return max_p;
+}
+
+double OffstreamNHPartitioner::calculate_rf_score(vid_t u, vid_t v, size_t partition_id) {
+    double gu = 0, gv = 0;
+    size_t u_degree = partial_degree[u];
+    size_t v_degree = partial_degree[v];
+    size_t sum = v_degree + u_degree;
+    // 归一化
+    if (is_mirrors[u].get(partition_id)) {
+        gu = (double)u_degree;
+        gu /= (double)sum;
+        gu = 1 + (1 - gu);
+    }
+    if (is_mirrors[v].get(partition_id)) {
+        gv = (double)v_degree;
+        gv /= (double)sum;
+        gv = 1 + (1 - gv);
+    }
+    double rf_score = gu + gv;
+    return rf_score;
+}
+
+double OffstreamNHPartitioner::calculate_lb_score(size_t partition_id) {
+
+    double  lb_score = (double)max_load - occupied[partition_id];
+    if (min_load != UINT64_MAX) {
+        lb_score /= (epsilon + (double)max_load - (double)min_load);
+    }
+
+    return lb_score;
 }
 
 bool OffstreamNHPartitioner::get_target_vertex(vid_t &vid) {
@@ -322,6 +352,8 @@ bool OffstreamNHPartitioner::get_target_vertex(vid_t &vid) {
     d.remove(vid);
     return true;
 }
+
+
 
 bool OffstreamNHPartitioner::get_free_vertex(vid_t &vid) {
     //随机选择一个节点
