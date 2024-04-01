@@ -14,22 +14,22 @@ OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, const strin
 
     partial_degree = baseGraph.partial_degree;
 
-    num_vertices_each_partition.assign(num_partitions, 0);
+   // num_vertices_each_partition.assign(num_partitions, 0);
 
     is_cores.assign(num_partitions, dense_bitset(num_vertices));
     is_boundaries.assign(num_partitions, dense_bitset(num_vertices));
-    true_vids.resize(num_vertices);
-    master.assign(num_vertices, -1);
+    true_vids = baseGraph.true_vids;
+    // master.assign(num_vertices, -1);
     dis.param(
             uniform_int_distribution<vid_t>::param_type(0, num_vertices - 1));
+//
+//    degrees.resize(num_vertices);
+//    ifstream degree_file(degree_name(input), ios::binary);
+//    degree_file.read((char *) &degrees[0], num_vertices * sizeof(vid_t));
+//    degree_file.close();
 
-    degrees.resize(num_vertices);
-    ifstream degree_file(degree_name(input), ios::binary);
-    degree_file.read((char *) &degrees[0], num_vertices * sizeof(vid_t));
-    degree_file.close();
-
-    part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
-    balance_vertex_distribute.resize(num_vertices);
+    // part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
+    // balance_vertex_distribute.resize(num_vertices);
 
     stream_part = baseGraph.stream_part;
     off_part = baseGraph.off_part;
@@ -62,36 +62,6 @@ void OffstreamNHPartitioner::assign_remaining() {
                     is_core.set_unsync(i, false);
                     break;
                 }
-        }
-    }
-}
-
-void OffstreamNHPartitioner::assign_master() {
-    vector<vid_t> count_master(num_partitions, 0);
-    vector<vid_t> quota(num_partitions, num_vertices);
-    long long sum = num_partitions * num_vertices;
-    uniform_real_distribution<double> distribution(0.0, 1.0);
-    vector<dense_bitset::iterator> pos(num_partitions);
-    rep(b, num_partitions) pos[b] = is_boundaries[b].begin();
-    vid_t count = 0;
-    while (count < num_vertices) {
-        long long r = distribution(gen) * sum;
-        //随机选择哪个子图先赋值
-        int k;
-        for (k = 0; k < num_partitions; k++) {
-            if (r < quota[k])
-                break;
-            r -= quota[k];
-        }
-        //选出当前位置还未被赋值的结点
-        while (pos[k] != is_boundaries[k].end() && master[*pos[k]] != -1)
-            pos[k]++;
-        if (pos[k] != is_boundaries[k].end()) {
-            count++;
-            master[*pos[k]] = k;
-            count_master[k]++;
-            quota[k]--;
-            sum--;
         }
     }
 }
@@ -183,84 +153,9 @@ void OffstreamNHPartitioner::split() {
 
 
     CHECK_EQ(assigned_edges, num_edges);
-
-    //根据结点平衡性、随机分配的重叠度以及结点的度大小来判断
-    vector<vid_t> current_partitions(num_partitions);
-    capacity = (double) true_vids.popcount() * 1.05 / num_partitions + 1;
-
-    // 复制因子
-    rep(i, num_vertices) {
-        double max_score = 0.0;
-        vid_t which_p;
-        bool unique = false;
-        // 判断顶点是否只属于一个分区
-        if (is_mirrors[i].popcount() == 1) {
-            unique = true;
-        }
-        // 计算顶点的分区最高得分
-        repv(j, num_partitions) {
-            if (is_mirrors[i].get(j)) {
-                num_vertices_each_partition[j]++; // 每个分区的顶点数
-                double score = (part_degrees[i][j] / (degrees[i] + 1)) + (current_partitions[j] < capacity ? 1 : 0);
-                if (unique) {
-                    which_p = j;
-                    break;
-                } else if (max_score < score) {
-                    max_score = score;
-                    which_p = j;
-                }
-            }
-        }
-        // 用最高得分所在的分区作为顶点的最终分区
-        ++current_partitions[which_p];
-        save_vertex(i, which_p);
-        balance_vertex_distribute[i] = which_p;
-    }
-//    repv(j, num_partitions) {
-//        LOG(INFO) << "Partition " << j << " Vertex Count: " << current_partitions[j];
-//    }
-
-    ifstream fin(binary_edgelist_name(input), ios::binary | ios::ate);
-    fin.seekg(sizeof(num_vertices) + sizeof(num_edges), ios::beg);
-    edges.resize(num_edges);
-    fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
-    for (auto &e: edges) {
-        vid_t sp = balance_vertex_distribute[e.first], tp = balance_vertex_distribute[e.second];
-        save_edge(e.first, e.second, sp);
-        save_edge(e.second, e.first, tp);
-    }
     total_time.stop();
-    LOG(INFO) << without_rep;
 }
 
-void OffstreamNHPartitioner::reindex() {
-    // 随机选择顶点，进行广度遍历，重新索引
-    vid_t index = 0;
-    vid_t vid = dis(gen);
-    // 基于该顶点进行深度遍历，对每个顶点重新索引
-    v_queue.push(vid);
-    while (!v_queue.empty()) {
-        vid_t v = v_queue.front();
-        v_queue.pop();
-        // 将v加入到indices,重新索引
-        indices.insert(std::pair<vid_t, vid_t>(index++, v));
-
-        // 获取v的邻居顶点
-        set < vid_t > neighbor_set = adjacency_list.find(v)->second;
-        // 将顶点v的邻居加入到队列中，注意去重
-        std::set<int> differenceSet;
-
-        // 使用 std::set_difference 求差值
-        std::set_difference(neighbor_set.begin(), neighbor_set.end(),
-                            v_set.begin(), v_set.end(),
-                            std::inserter(differenceSet, differenceSet.begin()));
-        // 将neighbor_set加入v_queue和v_set中
-        for (auto &i: differenceSet) {
-            v_queue.push(i);
-            v_set.insert(i);
-        }
-    }
-}
 
 int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
     auto degree_u = ++partial_degree[e.first];
@@ -341,18 +236,6 @@ double OffstreamNHPartitioner::calculate_lb_score(size_t partition_id) {
 
     return lb_score;
 }
-
-bool OffstreamNHPartitioner::get_target_vertex(vid_t &vid) {
-    // TODO 将随机选择顶点改成选择度最小的顶点，或者是距离当前分区所有节点距离最近的顶点
-    // TODO 以上这个计算不太现实
-    // 选择度最小的顶点，因为这样跨分区的边从一定概率来说是最小的
-    if (d.size() == 0) return false;
-    vid_t degree;
-    d.get_min(degree, vid);
-    d.remove(vid);
-    return true;
-}
-
 
 
 bool OffstreamNHPartitioner::get_free_vertex(vid_t &vid) {

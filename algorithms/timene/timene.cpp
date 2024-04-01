@@ -105,7 +105,7 @@ bool TimernePartitioner::get_free_vertex(vid_t &vid) {
     //如果是孤立节点直接跳过，或者当前结点在当前分割图中已超出平衡范围继续寻找，或者已经是核心集的结点
     while (count < num_vertices &&
            (adj_out[vid].size() + adj_in[vid].size() == 0
-//           || adj_out[vid].size() + adj_in[vid].size() > 2 * avg_degree
+//            || adj_out[vid].size() + adj_in[vid].size() > 2 * avg_degree
             || is_cores[current_partition].get(vid))) {
         vid = (vid + ++count) % num_vertices;
     }

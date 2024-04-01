@@ -9,10 +9,11 @@ project(GraphPartitioning)
 
 set(GLOG /opt/homebrew/Cellar/glog/0.6.0)
 set(GFLAGS /opt/homebrew/Cellar/gflags/2.2.2)
-set(BOOST /opt/homebrew/Cellar/boost/1.83.0)
+set(BOOST /opt/homebrew/Cellar/boost/1.84.0_1)
+set(PROFILER /opt/homebrew/Cellar/gperftools/2.15)
 
-include_directories(${GLOG}/include/ ${GFLAGS}/include/ ${BOOST}/include/)
-link_directories(${GLOG}/lib/ ${GFLAGS}/lib/)
+include_directories(${GLOG}/include/ ${GFLAGS}/include/ ${BOOST}/include/ ${PROFILER}/include/)
+link_directories(${GLOG}/lib/ ${GFLAGS}/lib/ ${PROFILER}/lib/)
 add_library(SOURCE_FILES
         converter/conversions.cpp
         converter/shuffler.cpp
@@ -50,5 +51,7 @@ add_library(SOURCE_FILES
         algorithms/offstreamNA/offstreamNA.cpp
         )
 add_executable(GraphPartitioning main.cpp)
-target_link_libraries(GraphPartitioning GLOG GFLAGS SOURCE_FILES)
+target_link_libraries(GraphPartitioning SOURCE_FILES PROFILER GLOG GFLAGS tcmalloc)
+
+
 

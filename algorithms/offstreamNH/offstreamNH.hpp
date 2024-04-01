@@ -25,28 +25,28 @@ class OffstreamNHPartitioner : public EdgePartitioner {
 private:
     const double BALANCE_RATIO = 1.00;
 
-    unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
+    // unordered_map<vid_t, vid_t> indices; // new_vid, old_vid
     // TODO 用dense_bitset
-    set<vid_t> v_set; // 重新索引时已经被处理的顶点
+   // set<vid_t> v_set; // 重新索引时已经被处理的顶点
     
-    queue<vid_t> v_queue;
+    // queue<vid_t> v_queue;
 
     string input;
 
     size_t current_partition;
     size_t capacity;
 
-    int without_rep = 0;
+    // int without_rep = 0;
 
-    vector<vector<vid_t> > part_degrees;
-    vector<int> balance_vertex_distribute;
-    MinHeap<vid_t, vid_t> d; // 顶点的度
+    //vector<vector<vid_t> > part_degrees;
+    // vector<int> balance_vertex_distribute;
+    // MinHeap<vid_t, vid_t> d; // 顶点的度
 
     MinHeap<vid_t, vid_t> min_heap;
 
-    vector<vid_t> degrees;
+    // vector<vid_t> degrees;
 
-    vector<int8_t> master;
+    // vector<int8_t> master;
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
 

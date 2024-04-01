@@ -12,6 +12,9 @@
 #include "utils/util.hpp"
 #include "baseGraph/base_graph.hpp"
 #include <filesystem>
+#include <gperftools/heap-profiler.h>
+#include <gperftools/profiler.h>
+
 namespace fs = filesystem;
 using namespace std;
 // #include <experimental/filesystem>
@@ -44,7 +47,8 @@ int main() {
        << endl;
     LOG(INFO) << ss.str();
     appendToFile(ss.str());
-
+    HeapProfilerStart("gp");
+    ProfilerStart("cpu.prof");
     for (const auto &entry: fs::directory_iterator(input)) {
         // 判断entry是否为文件
         if (fs::is_regular_file(entry)) {
@@ -74,6 +78,8 @@ int main() {
         }
     }
     google::ShutdownGoogleLogging();
+    ProfilerStop();
+    HeapProfilerStop();
     return 0;
 }
 

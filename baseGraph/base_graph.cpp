@@ -56,6 +56,7 @@ BaseGraph::BaseGraph(const string& graph_name) {
     LOG(INFO) << "File size: " << filesize
               << " | num_vertices: " << num_vertices
               << " | num_edges: " << num_edges
+              << " | sizeof edge_t: " << sizeof(edge_t)
               << endl;
 
     CHECK_EQ(sizeof(vid_t) + sizeof(size_t) + num_edges * sizeof(edge_t),
