@@ -70,6 +70,8 @@ public:
     long long total_degree = 0;
     dense_bitset true_vids;
 
+    size_t offline_edge_size;
+
 
     string graph_name;
 
@@ -87,6 +89,10 @@ public:
     Timer load_time;
     Timer preprocess_time;
 
+    streampos position;
+
+
+
 
     // 构造函数
     explicit BaseGraph(const string &graph_name);
@@ -94,4 +100,5 @@ public:
     void construct_adjacency_list();
     void partition();
     void re_index();
+
 };

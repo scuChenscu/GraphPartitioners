@@ -39,6 +39,8 @@ protected:
     // 每个分区顶点的数目
     vector<size_t> num_vertices_each_partition;
 
+    vector<size_t>* partial_degree;
+
     // 每个分区的边的数量
     vector<size_t> occupied;
     // 每个顶点所属的分区，每个顶点可能属于多个分区

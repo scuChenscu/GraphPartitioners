@@ -1,18 +1,21 @@
 #include "offstreamNH.hpp"
 
+#include <utility>
+
 using namespace std;
 
 //固定随机数
 // 构造函数
-OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, const string &input, const string &algorithm,
+OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, string input, const string &algorithm,
                              size_t num_partitions)
-        : EdgePartitioner(baseGraph, algorithm, num_partitions), input(input), gen(985) {
+        : EdgePartitioner(baseGraph, algorithm, num_partitions), input(std::move(input)), gen(985) {
     config_output_files();
-    current_partition = 0;
     // average_degree = (double) num_edges * 2 / (double) num_vertices;
     assigned_edges = 0;
 
-    partial_degree = baseGraph.partial_degree;
+    // partial_degree = baseGraph.partial_degree;
+
+    offline_edge_size = baseGraph.offline_edge_size;
 
    // num_vertices_each_partition.assign(num_partitions, 0);
 
@@ -30,17 +33,21 @@ OffstreamNHPartitioner::OffstreamNHPartitioner(BaseGraph& baseGraph, const strin
 
     // part_degrees.assign(num_vertices, vector<vid_t>(num_partitions));
     // balance_vertex_distribute.resize(num_vertices);
+//
+//    stream_part = baseGraph.stream_part;
+//    off_part = baseGraph.off_part;
 
-    stream_part = baseGraph.stream_part;
-    off_part = baseGraph.off_part;
+    // fin = std::move(baseGraph.fin);
 
     vertex_partitions.assign(num_vertices, set<size_t>());
 
 //    partial_degrees.resize(num_vertices);
 
-    capacity =  BALANCE_RATIO * (off_part.size() / (double)num_partitions) + 1;
+    capacity =  BALANCE_RATIO * (offline_edge_size / (double)num_partitions) + 1;
 
     max_partition_load = (uint64_t) BALANCE_RATIO * num_edges / num_partitions;
+
+    position = baseGraph.position;
 }
 
 //最后一个子图就是剩下边组合而成
@@ -140,8 +147,24 @@ void OffstreamNHPartitioner::split() {
     LOG(INFO) << "Start hdrf partitioning" << endl;
     LOG(INFO) << "max_partition_load: " << max_partition_load;
 
+    // fin.read((char *) &edges[0], sizeof(edge_t) * (num_edges - offline_edge_size));
+    ifstream fin;
 
-    for (auto &edge: stream_part) {
+    if (need_to_shuffle) {
+        fin.open(shuffled_binary_edgelist_name(graph_name),
+                 ios::binary | ios::ate);
+    } else {
+        fin.open(binary_edgelist_name(graph_name),
+                 ios::binary | ios::ate);
+    }
+    size_t stream_edge_size = num_edges - offline_edge_size;
+    edges.resize(stream_edge_size);
+    // TODO 这里不是继续读取，而是还是从开始读取了
+    fin.seekg(position);
+    fin.read((char *) &edges[0], sizeof(edge_t) * stream_edge_size);
+    // LOG(INFO) << edges.size();
+
+    for (auto &edge: edges) {
         int partition = find_max_score_partition(edge);
         is_mirrors[edge.first].set_bit_unsync(partition);
         is_mirrors[edge.second].set_bit_unsync(partition);
@@ -158,8 +181,8 @@ void OffstreamNHPartitioner::split() {
 
 
 int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
-    auto degree_u = ++partial_degree[e.first];
-    auto degree_v = ++partial_degree[e.second];
+//    auto degree_u = ++partial_degree[e.first];
+//    auto degree_v = ++partial_degree[e.second];
 
     uint32_t sum;
     double max_score = 0;
@@ -209,8 +232,8 @@ int OffstreamNHPartitioner::find_max_score_partition(edge_t &e) {
 
 double OffstreamNHPartitioner::calculate_rf_score(vid_t u, vid_t v, size_t partition_id) {
     double gu = 0, gv = 0;
-    size_t u_degree = partial_degree[u];
-    size_t v_degree = partial_degree[v];
+    size_t u_degree = ++(*partial_degree)[u];
+    size_t v_degree = ++(*partial_degree)[v];
     size_t sum = v_degree + u_degree;
     // 归一化
     if (is_mirrors[u].get(partition_id)) {

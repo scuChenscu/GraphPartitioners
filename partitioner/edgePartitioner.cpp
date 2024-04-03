@@ -15,6 +15,7 @@ EdgePartitioner::EdgePartitioner(BaseGraph &baseGraph, const std::string &algori
     this->avg_degree = baseGraph.avg_degree;
     this->min_degree = baseGraph.min_degree;
     this->max_degree = baseGraph.max_degree;
+    this->partial_degree = &baseGraph.partial_degree;
 
     replication_factor = 0.0;
     alpha = 0.0;

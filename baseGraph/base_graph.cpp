@@ -33,10 +33,10 @@ using namespace std;
 
 BaseGraph::BaseGraph(const string& graph_name) {
     total_time.start();
+    ifstream fin;
 
     load_time.start();
     this->graph_name = graph_name;
-    ifstream fin;
     if (need_to_shuffle) {
         fin.open(shuffled_binary_edgelist_name(graph_name),
                      ios::binary | ios::ate);
@@ -61,50 +61,69 @@ BaseGraph::BaseGraph(const string& graph_name) {
 
     CHECK_EQ(sizeof(vid_t) + sizeof(size_t) + num_edges * sizeof(edge_t),
              filesize);
-
-    edges.resize(num_edges);
+    if (algorithm_type == "offstream") {
+        offline_edge_size = EDGE_RATIO * num_edges;
+        edges.resize(offline_edge_size);
+        fin.read((char *) &edges[0], sizeof(edge_t) * offline_edge_size);
+        position = fin.tellg();
+    } else {
+        offline_edge_size = num_edges;
+        edges.resize(num_edges);
+        fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
+        position = fin.tellg();
+    }
     degrees.resize(num_vertices, 0);
     true_vids.resize(num_vertices);
     partial_degree.resize(num_vertices, 0);
 
-    fin.read((char *) &edges[0], sizeof(edge_t) * num_edges);
+    for(auto & edge : edges) {
+            partial_degree[edge.first]++;
+            partial_degree[edge.second]++;
+    }
+
     adj_out.resize(num_vertices);
     adj_in.resize(num_vertices);
     load_time.stop();
 
     preprocess_time.start();
     LOG(INFO)  << "Algorithm_Type: " << algorithm_type << ", Edge Ratio: " << EDGE_RATIO << endl;
-    if (algorithm_type == "offstream") {
-        // 将edges分为两个集合
-        size_t size = edges.size();
-        size_t halfSize = size * EDGE_RATIO; // 整数除法得到一半大小
-        if (size % 2 != 0) {
-            ++halfSize; // 如果总数是奇数，则第二个向量多一个元素
-        }
-        LOG(INFO) << "Memory Partitioning Size: " << halfSize << ", Stream Partitioning Size: " << (size - halfSize);
-        off_part.reserve(halfSize);
-        stream_part.reserve(size - halfSize);
+    LOG(INFO) << offline_edge_size;
+    // 初始化的时候构造图
+    adj_out.build(edges);
+    // 存储反向边
+    adj_in.build_reverse(edges);
 
-        std::copy(edges.begin(), edges.begin() + halfSize, std::back_inserter(off_part));
-        std::copy(edges.begin() + halfSize, edges.end(), std::back_inserter(stream_part));
-
-        for(size_t i = 0; i < off_part.size(); i++) {
-            auto& edge = off_part[i];
-            partial_degree[edge.first]++;
-            partial_degree[edge.second]++;
-        }
-
-        CHECK_EQ(edges.size(), off_part.size() + stream_part.size()) << "edges no equals!";
-
-        adj_out.build(off_part);
-        adj_in.build_reverse(off_part);
-
-    } else {
-        // 初始化的时候构造图
-        adj_out.build(edges);
-        // 存储反向边
-        adj_in.build_reverse(edges);
-    }
+//    if (algorithm_type == "offstream") {
+//        // 将edges分为两个集合
+//        size_t size = edges.size();
+//        size_t halfSize = size * EDGE_RATIO; // 整数除法得到一半大小
+//        if (size % 2 != 0) {
+//            ++halfSize; // 如果总数是奇数，则第二个向量多一个元素
+//        }
+//        LOG(INFO) << "Memory Partitioning Size: " << halfSize << ", Stream Partitioning Size: " << (size - halfSize);
+//        off_part.reserve(halfSize);
+//        stream_part.reserve(size - halfSize);
+//
+//        std::copy(edges.begin(), edges.begin() + halfSize, std::back_inserter(off_part));
+//        std::copy(edges.begin() + halfSize, edges.end(), std::back_inserter(stream_part));
+//
+//        for(size_t i = 0; i < off_part.size(); i++) {
+//            auto& edge = off_part[i];
+//            partial_degree[edge.first]++;
+//            partial_degree[edge.second]++;
+//        }
+//
+//        CHECK_EQ(edges.size(), off_part.size() + stream_part.size()) << "edges no equals!";
+//
+//        adj_out.build(off_part);
+//        adj_in.build_reverse(off_part);
+//
+//    } else {
+//        // 初始化的时候构造图
+//        adj_out.build(edges);
+//        // 存储反向边
+//        adj_in.build_reverse(edges);
+//    }
     gen.seed(DEFAULT_SEED);
 
     dis.param(

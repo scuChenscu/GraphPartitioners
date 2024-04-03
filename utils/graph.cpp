@@ -6,9 +6,11 @@ void graph_t::build(const std::vector<edge_t> &edges) {
     LOG(INFO) << "building graph" << endl;
     // 构造过程
     //可能存在孤立节点，在有边的时候才创建
-    // LOG(INFO) << nedges << endl;
+    // LOG(INFO) << edges.size() << endl;
     if (edges.size() > nedges) {
         // 重新分配空间，neighbors存储所有边的数据，通过vdata[vid]来获取到对应vid的邻边
+        neighbors = (uint40_t *) realloc(neighbors, sizeof(uint40_t) * edges.size());
+    } else {
         neighbors = (uint40_t *) realloc(neighbors, sizeof(uint40_t) * edges.size());
     }
     CHECK(neighbors) << "allocation failed";

@@ -36,6 +36,7 @@ private:
     size_t current_partition;
     size_t capacity;
 
+    size_t offline_edge_size;
     // int without_rep = 0;
 
     //vector<vector<vid_t> > part_degrees;
@@ -49,6 +50,8 @@ private:
     // vector<int8_t> master;
     vector<dense_bitset> is_cores, is_boundaries;
     dense_bitset true_vids;
+    // ifstream fin;
+    std::streampos position;
 
     //随机数生成器
     //std::random_device rd;
@@ -57,14 +60,14 @@ private:
     uniform_int_distribution<vid_t> dis;
 
 
-    vector<edge_t> off_part;
-    vector<edge_t> stream_part;
+//    vector<edge_t> off_part;
+//    vector<edge_t> stream_part;
 
     vector<set<size_t>> vertex_partitions;
 
 //    vector<vid_t> partial_degrees;
 
-    vector<size_t> partial_degree;
+    // vector<size_t> partial_degree;
 
 
     double ratio = 0.5;
@@ -84,11 +87,9 @@ private:
 
     bool get_free_vertex(vid_t &vid);
 
-    bool get_target_vertex(vid_t &vid);
 
     void assign_remaining();
 
-    void assign_master();
 
     size_t count_mirrors();
 
@@ -100,11 +101,9 @@ private:
     double calculate_rf_score(vid_t v, vid_t u, size_t p);
 
 public:
-    OffstreamNHPartitioner(BaseGraph& baseGraph, const string& input, const string& algorithm,
+    OffstreamNHPartitioner(BaseGraph& baseGraph, string  input, const string& algorithm,
                   size_t num_partitions);
     void split() override;
-    // 广度遍历，重新索引，用于将顶点分块
-    void reindex();
 
 };
 
